@@ -27,13 +27,21 @@ jobs:
     needs: [format-check, test]
     runs-on: ubuntu-latest
     container: espressif/idf:v6.0.1
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [wave_4b, wave_35, wave_5, crowpanel_101]
+    name: build (${{ matrix.board }})
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
       with:
         submodules: 'recursive'
-    - name: Build
+    - name: Build (${{ matrix.board }})
       run: |
         git config --global --add safe.directory "$GITHUB_WORKSPACE"
         . $IDF_PATH/export.sh
-        idf.py -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.wave_4b' build all size-components size
+        idf.py -B build_${{ matrix.board }} \
+               -D SDKCONFIG=build_${{ matrix.board }}/sdkconfig \
+               -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.${{ matrix.board }}' \
+               build all size-components size
