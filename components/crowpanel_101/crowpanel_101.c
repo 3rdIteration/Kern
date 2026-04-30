@@ -252,7 +252,7 @@ esp_err_t bsp_touch_new(const bsp_touch_config_t *config,
                         esp_lcd_touch_handle_t *ret_touch) {
   BSP_ERROR_CHECK_RETURN_ERR(bsp_i2c_init());
 
-  /* GT911 on CrowPanel_101 can respond at either 0x5D (primary) or 0x14
+  /* GT911 on crowpanel_101 can respond at either 0x5D (primary) or 0x14
      (backup) depending on INT/RST timing — probe both and fall back. */
   const esp_lcd_touch_config_t tp_cfg = {
       .x_max = BSP_LCD_H_RES,
