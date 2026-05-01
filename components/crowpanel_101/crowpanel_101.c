@@ -310,27 +310,23 @@ static lv_display_t *bsp_display_lcd_init(void) {
       .profile =
           {
               .interface = ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI,
-              .rotation = ESP_LV_ADAPTER_ROTATE_0,
-              .hor_res = BSP_LCD_H_RES,
-              .ver_res = BSP_LCD_V_RES,
-              // 1/4-screen partial buffer (150 lines), allocated in PSRAM
-              .buffer_height = BSP_LCD_V_RES / 4,
+              .rotation = ESP_LV_ADAPTER_ROTATE_90,
+              .hor_res = BSP_LCD_V_RES,
+              .ver_res = BSP_LCD_H_RES,
+              // 1/4-screen partial buffer (256 lines), allocated in PSRAM
+              .buffer_height = BSP_LCD_H_RES / 4,
               .use_psram = true,
               .enable_ppa_accel = false,
               .require_double_buffer = false,
           },
-      .tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE,
+      // TRIPLE_PARTIAL supports 90°/270° rotation on MIPI DSI and is the
+      // default tear-avoidance mode for this interface.  Requires
+      // CONFIG_BSP_LCD_DPI_BUFFER_NUMS=3 in the DPI hardware config.
+      .tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL,
       .te_sync = ESP_LV_ADAPTER_TE_SYNC_DISABLED(),
   };
 
-  lv_display_t *disp = esp_lv_adapter_register_display(&disp_cfg);
-  if (disp) {
-    // The physical panel is landscape (1024×600); rotate 90° in LVGL so the
-    // logical display is portrait (600×1024). LVGL v9 automatically transforms
-    // touch coordinates when the indev is linked to this display.
-    lv_display_set_rotation(disp, LV_DISPLAY_ROTATION_90);
-  }
-  return disp;
+  return esp_lv_adapter_register_display(&disp_cfg);
 }
 
 static lv_indev_t *bsp_display_indev_init(lv_display_t *disp) {
