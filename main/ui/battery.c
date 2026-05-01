@@ -13,13 +13,19 @@ static void battery_update(lv_obj_t *label) {
   bsp_pmic_get_charge_status(&chg);
 
   char buf[16];
+  lv_color_t color;
   if (chg == BSP_PMIC_CHG_CHARGING) {
-    snprintf(buf, sizeof(buf), "%u%% " LV_SYMBOL_CHARGE, pct);
+    snprintf(buf, sizeof(buf), LV_SYMBOL_CHARGE " %u%%", pct);
+    color = highlight_color();
+  } else if (chg == BSP_PMIC_CHG_FULL) {
+    snprintf(buf, sizeof(buf), LV_SYMBOL_OK " %u%%", pct);
+    color = yes_color();
   } else {
     snprintf(buf, sizeof(buf), "%u%%", pct);
+    color = pct > 20 ? yes_color() : error_color();
   }
   lv_label_set_text(label, buf);
-  lv_obj_set_style_text_color(label, pct > 20 ? yes_color() : error_color(), 0);
+  lv_obj_set_style_text_color(label, color, 0);
 }
 
 static void battery_timer_cb(lv_timer_t *t) {
