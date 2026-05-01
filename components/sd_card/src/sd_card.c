@@ -49,12 +49,20 @@ esp_err_t sd_card_init(void) {
   host.slot = SDMMC_HOST_SLOT_0;
   host.max_freq_khz = SDMMC_FREQ_HIGHSPEED;
 
-  sdmmc_slot_config_t slot_config = {
-      .cd = SDMMC_SLOT_NO_CD,
-      .wp = SDMMC_SLOT_NO_WP,
-      .width = 4,
-      .flags = 0,
-  };
+  sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
+  slot_config.cd = SDMMC_SLOT_NO_CD;
+  slot_config.wp = SDMMC_SLOT_NO_WP;
+  slot_config.width = CONFIG_SD_BUS_WIDTH;
+
+#if CONFIG_SD_CLK_GPIO != -1
+  slot_config.clk = CONFIG_SD_CLK_GPIO;
+  slot_config.cmd = CONFIG_SD_CMD_GPIO;
+  slot_config.d0 = CONFIG_SD_D0_GPIO;
+#endif
+
+#if CONFIG_SD_INTERNAL_PULLUP
+  slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
+#endif
 
   ret = esp_vfs_fat_sdmmc_mount(SD_CARD_MOUNT_POINT, &host, &slot_config,
                                 &mount_config, &s_card);
