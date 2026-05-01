@@ -97,11 +97,11 @@ jobs:
             -DSIM_LCD_H_RES="$W" \
             -DSIM_LCD_V_RES="$H"
           cmake --build "simulator/build_${board}" -- -j$(nproc)
-          echo "Taking screenshot for $board..."
+          echo "Taking screenshot tour for $board..."
+          mkdir -p "screenshots/${board}_${W}x${H}"
           SDL_VIDEODRIVER=offscreen SDL_RENDER_DRIVER=software \
           "simulator/build_${board}/kern_simulator" \
-            --screenshot "screenshots/${board}_${W}x${H}.ppm" \
-            --screenshot-delay 5000
+            --screenshot-tour "screenshots/${board}_${W}x${H}"
         done
     - name: Upload UI screenshots
       uses: actions/upload-artifact@v4
@@ -109,7 +109,6 @@ jobs:
         name: ui-screenshots
         path: screenshots/
         retention-days: 30
-
   deploy-flasher:
     needs: [build]
     runs-on: ubuntu-latest

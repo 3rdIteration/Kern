@@ -5,8 +5,28 @@ GitHub Copilot coding agent) working on this repository.
 
 ## UI Screenshot Verification
 
-Every CI run produces a **`ui-screenshots` artifact** containing PPM screenshots
-of the simulator rendered at each supported board resolution:
+Every CI run produces a **`ui-screenshots` artifact** containing PNG screenshots
+of every screen and menu in the simulator, captured at each supported board
+resolution.  Subdirectories are named `<board>_<W>x<H>/` and each contains 13
+numbered PNGs:
+
+| File                       | Screen shown                  |
+|----------------------------|-------------------------------|
+| `01_splash.png`            | Animated splash screen        |
+| `02_login.png`             | Login menu                    |
+| `03_pin_entry.png`         | PIN unlock screen             |
+| `04_about.png`             | About page                    |
+| `05_login_settings.png`    | Login settings                |
+| `06_new_mnemonic_menu.png` | New mnemonic menu             |
+| `07_load_mnemonic_menu.png`| Load mnemonic menu            |
+| `08_home.png`              | Home menu (demo key loaded)   |
+| `09_addresses.png`         | Addresses (with QR codes)     |
+| `10_backup_menu.png`       | Backup menu                   |
+| `11_mnemonic_qr.png`       | Mnemonic QR code backup       |
+| `12_mnemonic_words.png`    | Mnemonic words backup         |
+| `13_public_key.png`        | Extended public key (xpub)    |
+
+Boards and resolutions:
 
 | Board           | Resolution  |
 |-----------------|-------------|
@@ -25,21 +45,28 @@ particular, look for:
 - Content that looks correct on a square/portrait screen but breaks on landscape
   (1024 × 600) or on the small 320 × 480 display.
 
-The screenshots are captured from the simulator's login page (shown after the
-3-second splash screen) by running each board variant with
-`SDL_VIDEODRIVER=offscreen` and the `--screenshot` flag.  To regenerate them
-locally, run:
+To regenerate screenshots locally, run:
 
 ```bash
 just sim-build <board>   # e.g. just sim-build crowpanel_101
+mkdir -p /tmp/screenshots
 SDL_VIDEODRIVER=offscreen SDL_RENDER_DRIVER=software \
   ./simulator/build/kern_simulator \
-  --screenshot /tmp/screenshot.ppm \
-  --screenshot-delay 5000
+  --screenshot-tour /tmp/screenshots
 ```
 
-PPM files can be viewed with most image viewers (e.g. `feh`, `eog`, GIMP, or
-converted to PNG with `convert screenshot.ppm screenshot.png`).
+The `--screenshot-tour` flag navigates through every screen/menu automatically,
+saves one PNG per screen, then exits.  The wallet screens use the standard BIP39
+all-abandon test vector (never use for real funds).
+
+A single-screenshot mode is still available for quick checks:
+
+```bash
+SDL_VIDEODRIVER=offscreen SDL_RENDER_DRIVER=software \
+  ./simulator/build/kern_simulator \
+  --screenshot /tmp/screenshot.png \
+  --screenshot-delay 5000
+```
 
 ## Supported Board Resolutions
 
