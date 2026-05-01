@@ -21,6 +21,10 @@ jobs:
 
       - name: Fetch base branch
         run: |
+          # The ESP-IDF container runs as a different user than the one that
+          # owns the workspace, so git refuses operations with "dubious
+          # ownership" until the workspace is whitelisted.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git fetch --no-tags --prune --depth=1 origin \
             "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
 
