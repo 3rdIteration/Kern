@@ -310,11 +310,11 @@ static lv_display_t *bsp_display_lcd_init(void) {
       .profile =
           {
               .interface = ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI,
-              .rotation = ESP_LV_ADAPTER_ROTATE_0,
-              .hor_res = BSP_LCD_H_RES,
-              .ver_res = BSP_LCD_V_RES,
-              // 1/4-screen partial buffer (150 lines), allocated in PSRAM
-              .buffer_height = BSP_LCD_V_RES / 4,
+              .rotation = ESP_LV_ADAPTER_ROTATE_90,
+              .hor_res = BSP_LCD_V_RES,
+              .ver_res = BSP_LCD_H_RES,
+              // 1/4-screen partial buffer (256 lines), allocated in PSRAM
+              .buffer_height = BSP_LCD_H_RES / 4,
               .use_psram = true,
               .enable_ppa_accel = false,
               .require_double_buffer = false,
