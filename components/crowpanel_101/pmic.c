@@ -61,18 +61,14 @@ static esp_err_t pmic_read_u8(uint8_t reg, uint8_t *val)
                                        I2C_TIMEOUT_MS);
 }
 
-/* Read a little-endian uint32_t from four consecutive registers */
+/* Read a little-endian uint32_t using a single 4-byte I²C transfer */
 static esp_err_t pmic_read_u32_le(uint8_t reg, uint32_t *val)
 {
     uint8_t buf[4];
-    for (int i = 0; i < 4; i++) {
-        uint8_t r = reg + i;
-        esp_err_t err = i2c_master_transmit_receive(pmic_dev, &r, 1,
-                                                    &buf[i], 1,
-                                                    I2C_TIMEOUT_MS);
-        if (err != ESP_OK) {
-            return err;
-        }
+    esp_err_t err = i2c_master_transmit_receive(pmic_dev, &reg, 1, buf, 4,
+                                                I2C_TIMEOUT_MS);
+    if (err != ESP_OK) {
+        return err;
     }
     *val = (uint32_t)buf[0]
          | ((uint32_t)buf[1] << 8)
@@ -100,11 +96,18 @@ esp_err_t bsp_pmic_init(void)
     ESP_RETURN_ON_ERROR(i2c_master_bus_add_device(bus, &dev_cfg, &pmic_dev),
                         TAG, "add STC8H device");
 
-    /* Probe: try reading the bat_level register */
+    /* Probe: try reading the bat_level register and sanity-check its value */
     uint8_t probe_val = 0;
     esp_err_t ret = pmic_read_u8(REG_BAT_LEVEL, &probe_val);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "STC8H1KXX not found (err=%d)", ret);
+        i2c_master_bus_rm_device(pmic_dev);
+        pmic_dev = NULL;
+        return ESP_ERR_NOT_FOUND;
+    }
+    if (probe_val > 100) {
+        ESP_LOGW(TAG, "STC8H1KXX returned unexpected bat_level=%u during probe",
+                 probe_val);
         i2c_master_bus_rm_device(pmic_dev);
         pmic_dev = NULL;
         return ESP_ERR_NOT_FOUND;
