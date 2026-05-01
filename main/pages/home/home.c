@@ -32,6 +32,10 @@ static void return_from_addresses_cb(void);
 static void return_from_scan_cb(void);
 static void return_from_wallet_settings_cb(void);
 
+static void no_camera_cb(void) {
+  dialog_show_message("No Camera Detected", "This feature requires a camera.");
+}
+
 static void menu_backup_cb(void) {
   home_page_hide();
   backup_menu_page_create(lv_screen_active(), return_from_backup_menu_cb);
@@ -160,6 +164,7 @@ void home_page_create(lv_obj_t *parent) {
   ui_menu_add_entry(main_menu, ICON_QR_CODE "  Scan", menu_scan_cb);
   if (!camera_is_available()) {
     ui_menu_set_entry_enabled(main_menu, 0, false);
+    ui_menu_set_entry_disabled_callback(main_menu, 0, no_camera_cb);
   }
   ui_menu_add_entry(main_menu, "Extended Public Key", menu_xpub_cb);
   ui_menu_add_entry(main_menu, "Addresses", menu_addresses_cb);

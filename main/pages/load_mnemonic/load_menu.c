@@ -6,6 +6,7 @@
 #include "../../core/kef.h"
 #include "../../core/storage.h"
 #include "../../qr/scanner.h"
+#include "../../ui/dialog.h"
 #include "../../ui/menu.h"
 #include "../../ui/theme.h"
 #include "../home/home.h"
@@ -19,6 +20,10 @@
 static ui_menu_t *load_menu = NULL;
 static lv_obj_t *load_menu_screen = NULL;
 static void (*return_callback)(void) = NULL;
+
+static void no_camera_cb(void) {
+  dialog_show_message("No Camera Detected", "This feature requires a camera.");
+}
 
 static void return_from_key_confirmation_cb(void) {
   key_confirmation_page_destroy();
@@ -167,6 +172,7 @@ void load_menu_page_create(lv_obj_t *parent, void (*return_cb)(void)) {
   ui_menu_add_entry(load_menu, "From QR Code", from_qr_code_cb);
   if (!camera_is_available()) {
     ui_menu_set_entry_enabled(load_menu, 0, false);
+    ui_menu_set_entry_disabled_callback(load_menu, 0, no_camera_cb);
   }
   ui_menu_add_entry(load_menu, "From Manual Input", from_manual_input_cb);
   ui_menu_add_entry(load_menu, "From Flash", from_flash_cb);
