@@ -128,20 +128,29 @@ esp_err_t bsp_pmic_get_charge_status(bsp_pmic_chg_t *status) {
   }
   uint8_t val;
   ESP_RETURN_ON_ERROR(pmic_read_u8(REG_STATUS1, &val), TAG, "read STATUS1");
-  /* Bits [6:5] of STATUS1: charging status */
-  uint8_t chg = (val >> 5) & 0x03;
-  switch (chg) {
+  /*
+   * AXP2101 register 0x01 (STATUS1 / PMU_STATUS_2 in datasheet) bits [2:0]:
+   * CHG_STAT
+   *   0 = trickle charge  → charging
+   *   1 = pre-charge      → charging
+   *   2 = constant current (CC) → charging
+   *   3 = constant voltage (CV) → charging
+   *   4 = charge done     → full
+   *   5 = not charging    → discharging
+   */
+  switch (val & 0x07) {
   case 0:
-    *status = BSP_PMIC_CHG_DISCHARGING;
-    break;
   case 1:
+  case 2:
+  case 3:
     *status = BSP_PMIC_CHG_CHARGING;
     break;
-  case 2:
+  case 4:
     *status = BSP_PMIC_CHG_FULL;
     break;
+  case 5:
   default:
-    *status = BSP_PMIC_CHG_ABSENT;
+    *status = BSP_PMIC_CHG_DISCHARGING;
     break;
   }
   return ESP_OK;
