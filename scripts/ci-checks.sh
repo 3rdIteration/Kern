@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Run all CI checks for a single commit: format, tests, and a wave_4b build.
+# Run all CI checks for a single commit: format, tests, and a build for every
+# board variant.
 # Invoked from the per-commit CI loop (see .github/workflows/test-each-commit.yml)
 # and runnable locally to reproduce what CI does.
 
@@ -19,12 +20,15 @@ echo "=== format check ==="
 echo "=== tests ==="
 "$SCRIPT_DIR/test.sh"
 
-echo "=== build wave_4b ==="
 # Local dev: load ESP-IDF if idf.py isn't already on PATH. In CI the job
 # sources export.sh once before the per-commit loop, so this is a no-op.
 command -v idf.py >/dev/null || . "${IDF_PATH:-$HOME/esp/esp-idf}/export.sh"
-idf.py \
-    -B build_wave_4b \
-    -D SDKCONFIG=build_wave_4b/sdkconfig \
-    -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.wave_4b' \
-    build
+
+for board in wave_4b wave_35 wave_5 crowpanel_101; do
+    echo "=== build ${board} ==="
+    idf.py \
+        -B "build_${board}" \
+        -D "SDKCONFIG=build_${board}/sdkconfig" \
+        -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.${board}" \
+        build
+done
