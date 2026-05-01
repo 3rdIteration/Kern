@@ -18,3 +18,12 @@ void camera_detect(void);
  * Returns false if camera_detect() has not been called yet.
  */
 bool camera_is_available(void);
+
+/**
+ * @brief Show a "No Camera Detected" info dialog.
+ *
+ * Convenience callback for disabling camera-dependent menu entries:
+ * pass this function to ui_menu_set_entry_disabled_callback() so that
+ * tapping a disabled entry explains why it is unavailable.
+ */
+void camera_show_no_camera_dialog(void);

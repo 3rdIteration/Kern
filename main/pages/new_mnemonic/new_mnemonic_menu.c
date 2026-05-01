@@ -30,10 +30,6 @@ static void return_from_mnemonic_editor_cb(void);
 static void return_from_key_confirmation_cb(void);
 static void success_from_key_confirmation_cb(void);
 
-static void no_camera_cb(void) {
-  dialog_show_message("No Camera Detected", "This feature requires a camera.");
-}
-
 static void return_from_dice_rolls_cb(void) {
   char *mnemonic = dice_rolls_get_completed_mnemonic();
   dice_rolls_page_destroy();
@@ -151,7 +147,8 @@ void new_mnemonic_menu_page_create(lv_obj_t *parent, void (*return_cb)(void)) {
   ui_menu_add_entry(new_mnemonic_menu, "From Camera", from_camera_cb);
   if (!camera_is_available()) {
     ui_menu_set_entry_enabled(new_mnemonic_menu, 2, false);
-    ui_menu_set_entry_disabled_callback(new_mnemonic_menu, 2, no_camera_cb);
+    ui_menu_set_entry_disabled_callback(new_mnemonic_menu, 2,
+                                        camera_show_no_camera_dialog);
   }
   ui_menu_show(new_mnemonic_menu);
 }
