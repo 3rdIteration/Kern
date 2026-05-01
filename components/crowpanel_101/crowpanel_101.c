@@ -316,7 +316,7 @@ static lv_display_t *bsp_display_lcd_init(void) {
               // 1/4-screen partial buffer (256 lines), allocated in PSRAM
               .buffer_height = BSP_LCD_H_RES / 4,
               .use_psram = true,
-              .enable_ppa_accel = false,
+              .enable_ppa_accel = true,
               .require_double_buffer = false,
           },
       // TRIPLE_PARTIAL supports 90°/270° rotation on MIPI DSI and is the
