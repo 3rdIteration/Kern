@@ -136,6 +136,18 @@ CONFIG_CAM_MOTOR_DW9714=y
 CONFIG_CAMERA_OV5647_ENABLE_MOTOR_BY_GPIO0=y
 ```
 
+## Web Flasher
+
+The easiest way to flash Kern is the browser-based flasher, which requires no local toolchain. It works in **Google Chrome** or **Microsoft Edge** (version 89+) via the Web Serial API.
+
+**Live flasher:** https://3rditeration.github.io/Kern/
+
+The flasher offers two modes:
+- **Latest CI Build** — fetches the firmware built by the most recent `master` push directly from the site and flashes it to the selected board.
+- **Custom ZIP Bundle** — accepts a `firmware-<board>.zip` artifact downloaded from the [Actions tab](../../actions) to flash any PR or older build.
+
+> **Note:** The live flasher is deployed automatically on every successful push to `master`. To enable it for your fork, go to **Settings → Pages** and set the source to **GitHub Actions**.
+
 ## Flashing CI Build Artifacts
 
 Every pull request and push to `master` produces a firmware artifact for each supported board via the **GitHub Actions test** workflow. These builds are useful for testing unreleased changes without setting up a local toolchain.
