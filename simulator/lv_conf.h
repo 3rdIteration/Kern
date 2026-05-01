@@ -59,6 +59,7 @@
  *==================*/
 
 #define LV_USE_QRCODE 1
+#define LV_USE_SNAPSHOT 1
 
 /*====================
  * DEMOS AND EXAMPLES

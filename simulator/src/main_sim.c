@@ -26,6 +26,7 @@
 #include "sim_sdcard.h"
 #include <bsp/pmic.h>
 #include <SDL2/SDL.h>
+#include <errno.h>
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
@@ -42,6 +43,47 @@
 #ifndef SIM_LCD_V_RES
 #define SIM_LCD_V_RES 720
 #endif
+
+/* -------------------------------------------------------------------------- */
+/* Screenshot support                                                          */
+/* -------------------------------------------------------------------------- */
+
+static char *screenshot_path = NULL;
+static int   screenshot_delay_ms = 5000;
+
+/* Write LVGL draw-buffer as a binary PPM (P6) file.
+ * Handles row stride padding so partial rows are not included. */
+static void save_screenshot_ppm(const char *path, const lv_draw_buf_t *buf) {
+    FILE *f = fopen(path, "wb");
+    if (!f) {
+        fprintf(stderr, "Screenshot: cannot open '%s': %s\n", path, strerror(errno));
+        return;
+    }
+    uint32_t w      = buf->header.w;
+    uint32_t h      = buf->header.h;
+    uint32_t stride = buf->header.stride;
+    const uint8_t *data = (const uint8_t *)buf->data;
+    fprintf(f, "P6\n%u %u\n255\n", w, h);
+    for (uint32_t y = 0; y < h; y++) {
+        fwrite(data + (size_t)y * stride, 3, w, f);
+    }
+    fclose(f);
+    printf("Screenshot saved: %s (%ux%u)\n", path, w, h);
+}
+
+static void screenshot_timer_cb(lv_timer_t *timer) {
+    lv_timer_delete(timer);
+    lv_obj_t *scr = lv_screen_active();
+    lv_draw_buf_t *snap = lv_snapshot_take(scr, LV_COLOR_FORMAT_RGB888);
+    if (snap) {
+        save_screenshot_ppm(screenshot_path, snap);
+        lv_snapshot_free(snap);
+        exit(0);
+    } else {
+        fprintf(stderr, "Screenshot: lv_snapshot_take failed\n");
+        exit(1);
+    }
+}
 
 /* -------------------------------------------------------------------------- */
 /* Forward declarations                                                        */
@@ -112,6 +154,8 @@ static void print_usage(const char *prog) {
     printf("  -W, --width <N>         Display width in pixels (default: %d)\n", SIM_LCD_H_RES);
     printf("  -H, --height <N>        Display height in pixels (default: %d)\n", SIM_LCD_V_RES);
     printf("  -w, --webcam [device]   Use webcam (default: /dev/video0)\n");
+    printf("  -s, --screenshot <path> Save a screenshot (PPM) after --screenshot-delay ms then exit\n");
+    printf("  -S, --screenshot-delay <ms>  Delay before screenshot (default: %d ms)\n", screenshot_delay_ms);
     printf("  -v, --verbose           Enable DEBUG-level logging\n");
     printf("  -h, --help              Show this help\n");
 }
@@ -138,20 +182,22 @@ int main(int argc, char *argv[]) {
 
     /* Parse CLI arguments before any init */
     static const struct option long_opts[] = {
-        { "qr-image", required_argument, NULL, 'q' },
-        { "qr-dir",   required_argument, NULL, 'Q' },
-        { "data-dir", required_argument, NULL, 'd' },
-        { "width",    required_argument, NULL, 'W' },
-        { "height",   required_argument, NULL, 'H' },
-        { "webcam",   optional_argument, NULL, 'w' },
-        { "verbose",  no_argument,       NULL, 'v' },
-        { "help",     no_argument,       NULL, 'h' },
+        { "qr-image",         required_argument, NULL, 'q' },
+        { "qr-dir",           required_argument, NULL, 'Q' },
+        { "data-dir",         required_argument, NULL, 'd' },
+        { "width",            required_argument, NULL, 'W' },
+        { "height",           required_argument, NULL, 'H' },
+        { "webcam",           optional_argument, NULL, 'w' },
+        { "screenshot",       required_argument, NULL, 's' },
+        { "screenshot-delay", required_argument, NULL, 'S' },
+        { "verbose",          no_argument,       NULL, 'v' },
+        { "help",             no_argument,       NULL, 'h' },
         { NULL, 0, NULL, 0 }
     };
     int sim_width = SIM_LCD_H_RES;
     int sim_height = SIM_LCD_V_RES;
     int opt;
-    while ((opt = getopt_long(argc, argv, "q:Q:d:W:H:w::vh", long_opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "q:Q:d:W:H:w::s:S:vh", long_opts, NULL)) != -1) {
         switch (opt) {
             case 'q':
                 sim_video_set_qr_image(optarg);
@@ -175,6 +221,19 @@ int main(int argc, char *argv[]) {
             case 'w':
                 sim_video_set_webcam(optarg);
                 break;
+            case 's':
+                screenshot_path = optarg;
+                break;
+            case 'S': {
+                char *end;
+                long val = strtol(optarg, &end, 10);
+                if (*end != '\0' || val <= 0) {
+                    fprintf(stderr, "Invalid screenshot delay: %s\n", optarg);
+                    return 1;
+                }
+                screenshot_delay_ms = (int)val;
+                break;
+            }
             case 'v':
                 esp_log_level_set("*", ESP_LOG_DEBUG);
                 break;
@@ -263,6 +322,16 @@ int main(int argc, char *argv[]) {
      * --------------------------------------------------------------------- */
     lv_timer_t *splash_timer = lv_timer_create(splash_done_cb, 3000, NULL);
     lv_timer_set_repeat_count(splash_timer, 1);
+
+    /* -----------------------------------------------------------------------
+     * Schedule screenshot (if requested) and exit after the specified delay.
+     * This is used by CI to capture UI screenshots for each board resolution.
+     * --------------------------------------------------------------------- */
+    if (screenshot_path) {
+        lv_timer_t *ss_timer = lv_timer_create(screenshot_timer_cb,
+                                               screenshot_delay_ms, NULL);
+        lv_timer_set_repeat_count(ss_timer, 1);
+    }
 
     /* -----------------------------------------------------------------------
      * Main loop
