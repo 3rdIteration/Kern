@@ -560,6 +560,8 @@ esp_err_t app_video_deinit(void) {
 }
 
 bool app_video_detect(i2c_master_bus_handle_t i2c_handle) {
+  s_camera_available = false;
+
   esp_err_t ret = app_video_main(i2c_handle);
   if (ret != ESP_OK) {
     ESP_LOGW(TAG, "Camera not detected: init failed (%s)",
