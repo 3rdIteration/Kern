@@ -65,22 +65,28 @@ void about_page_create(lv_obj_t *parent, void (*return_cb)(void)) {
     lv_obj_set_flex_align(body, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
 
-    // Left column: logo + version text
+    // Left column: logo + version text.  Use LV_SIZE_CONTENT width so the
+    // logo+KERN row is never clipped regardless of font/logo dimensions, and
+    // add left padding equal to the standard page padding so the logo has a
+    // proper margin from the screen edge.
     lv_obj_t *left_col = lv_obj_create(body);
     lv_obj_remove_style_all(left_col);
     lv_obj_clear_flag(left_col, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_size(left_col, LV_PCT(50), body_h);
+    lv_obj_set_size(left_col, LV_SIZE_CONTENT, body_h);
+    lv_obj_set_style_pad_left(left_col, pad, 0);
     lv_obj_set_flex_flow(left_col, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(left_col, LV_FLEX_ALIGN_SPACE_EVENLY,
                           LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     kern_logo_with_text_inline(left_col);
     theme_create_label(left_col, ver_text, true);
 
-    // Right column: QR code sized to fit available height
+    // Right column: fills remaining space via flex-grow so the QR code is
+    // always visible even when the left column is wider than half the screen.
     lv_obj_t *right_col = lv_obj_create(body);
     lv_obj_remove_style_all(right_col);
     lv_obj_clear_flag(right_col, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_size(right_col, LV_PCT(50), body_h);
+    lv_obj_set_size(right_col, 0, body_h);
+    lv_obj_set_style_flex_grow(right_col, 1, 0);
     lv_obj_set_flex_flow(right_col, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(right_col, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
