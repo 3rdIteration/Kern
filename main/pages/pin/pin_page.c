@@ -527,15 +527,24 @@ static void build_unlock_entry_state(void) {
   ui_text_input_create(&text_input, page_screen, "", true, input_ready_cb);
   text_input_active = true;
 
-  // Reposition textarea from default y=140 to y=60
+  // Position the textarea just below the title label.  The title sits at
+  // theme_get_default_padding() inside page_screen's content area and is
+  // one font line tall, so the textarea must start at least that far down.
+  // Using lv_font_get_line_height() ensures this is correct on every board
+  // regardless of which font size is in use.
+  int32_t ta_pad = theme_get_default_padding();
+  int32_t title_font_h = (int32_t)lv_font_get_line_height(theme_font_small());
+  int32_t ta_top = ta_pad + title_font_h + LV_MAX(ta_pad / 4, 10);
   lv_obj_align(text_input.textarea, LV_ALIGN_TOP_LEFT, LV_HOR_RES * 5 / 100,
-               60);
+               ta_top);
   // Re-align eye button to match
   if (text_input.eye_btn)
     lv_obj_align_to(text_input.eye_btn, text_input.textarea,
                     LV_ALIGN_OUT_RIGHT_MID, 5, 0);
 
-  // Hidden flex row at y=115: identicon + words side-by-side
+  // Hidden flex row below the textarea: identicon + words side-by-side.
+  // ta_top + 50 (textarea height) + 5 (gap) gives the words_container top.
+  int32_t words_top = ta_top + 50 + 5;
   words_container = lv_obj_create(page_screen);
   lv_obj_remove_style_all(words_container);
   lv_obj_set_flex_flow(words_container, LV_FLEX_FLOW_ROW);
@@ -543,7 +552,7 @@ static void build_unlock_entry_state(void) {
                         LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_style_pad_gap(words_container, 12, 0);
   lv_obj_set_size(words_container, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-  lv_obj_align(words_container, LV_ALIGN_TOP_MID, 0, 125);
+  lv_obj_align(words_container, LV_ALIGN_TOP_MID, 0, words_top);
   lv_obj_add_flag(words_container, LV_OBJ_FLAG_HIDDEN);
 
   // Identicon canvas (120x120 RGB565)
@@ -561,14 +570,15 @@ static void build_unlock_entry_state(void) {
   lv_obj_set_style_text_font(words_label, theme_font_medium(), 0);
   lv_obj_set_style_text_color(words_label, highlight_color(), 0);
 
-  // Hidden warning label below identicon row (125 + 120 + 5 = 250)
+  // Hidden warning label below identicon row (words_top + IDENTICON_SIZE + gap)
   words_warning = lv_label_create(page_screen);
   lv_label_set_text(words_warning, "If image or words don't match, stop!");
   lv_obj_set_style_text_font(words_warning, theme_font_small(), 0);
   lv_obj_set_style_text_color(words_warning, error_color(), 0);
   lv_obj_set_style_text_align(words_warning, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_width(words_warning, LV_PCT(100));
-  lv_obj_align(words_warning, LV_ALIGN_TOP_MID, 0, 260);
+  lv_obj_align(words_warning, LV_ALIGN_TOP_MID, 0,
+               words_top + IDENTICON_SIZE + 5);
   lv_obj_add_flag(words_warning, LV_OBJ_FLAG_HIDDEN);
 
   // Attach keystroke callback if anti-phishing is available
