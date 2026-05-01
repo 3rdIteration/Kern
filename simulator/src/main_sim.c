@@ -108,7 +108,13 @@ static void screenshot_timer_cb(lv_timer_t *timer) {
     "abandon abandon abandon abandon abandon abandon " \
     "abandon abandon abandon abandon abandon about"
 
-static char tour_output_dir[512];
+/* Maximum length of the tour output directory path. */
+#define TOUR_DIR_MAX 512
+/* tour_capture() path buffer = dir + '/' + name + ".png" + NUL
+ * The longest name is "07_load_mnemonic_menu.png" (25 chars), so 256 extra is ample. */
+#define TOUR_PATH_MAX (TOUR_DIR_MAX + 256)
+
+static char tour_output_dir[TOUR_DIR_MAX];
 
 typedef enum {
     TOUR_IDLE = -1,
@@ -139,7 +145,7 @@ static void tour_schedule_next(void) {
 }
 
 static void tour_capture(const char *name) {
-    char path[768];
+    char path[TOUR_PATH_MAX];
     lv_refr_now(NULL);
     lv_obj_t *scr = lv_screen_active();
     lv_draw_buf_t *snap = lv_snapshot_take(scr, LV_COLOR_FORMAT_RGB888);
@@ -466,7 +472,6 @@ int main(int argc, char *argv[]) {
             }
             case 't':
                 snprintf(tour_output_dir, sizeof(tour_output_dir), "%s", optarg);
-                tour_state = TOUR_CAPTURE_SPLASH;
                 break;
             case 'v':
                 esp_log_level_set("*", ESP_LOG_DEBUG);
@@ -482,6 +487,17 @@ int main(int argc, char *argv[]) {
                     argv[0]);
                 return 1;
         }
+    }
+
+    /* Activate screenshot tour after all arguments are parsed.
+     * Tour and single-screenshot modes are mutually exclusive. */
+    if (tour_output_dir[0] != '\0') {
+        if (screenshot_path) {
+            fprintf(stderr,
+                    "--screenshot and --screenshot-tour are mutually exclusive\n");
+            return 1;
+        }
+        tour_state = TOUR_CAPTURE_SPLASH;
     }
 
     printf("Kern Simulator starting (%dx%d)\n", sim_width, sim_height);
