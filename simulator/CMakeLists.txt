@@ -198,6 +198,7 @@ set(PLATFORM_SIM_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/platform/sd_card_sim/sd_card_sim.c
     ${CMAKE_CURRENT_SOURCE_DIR}/platform/video_sim/video_sim.c
     ${CMAKE_CURRENT_SOURCE_DIR}/platform/video_sim/stb_image_impl.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/platform/video_sim/stb_image_write_impl.c
 )
 
 if(SIM_WEBCAM)

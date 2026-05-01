@@ -13,8 +13,20 @@
 #include "core/settings.h"
 #include "core/pin.h"
 #include "core/session.h"
+#include "core/key.h"
+#include "core/wallet.h"
 #include "pages/pin/pin_page.h"
 #include "pages/login/login.h"
+#include "pages/login/about.h"
+#include "pages/login/login_settings.h"
+#include "pages/new_mnemonic/new_mnemonic_menu.h"
+#include "pages/load_mnemonic/load_menu.h"
+#include "pages/home/home.h"
+#include "pages/home/addresses.h"
+#include "pages/home/public_key.h"
+#include "pages/home/backup/backup_menu.h"
+#include "pages/home/backup/mnemonic_qr.h"
+#include "pages/home/backup/mnemonic_words.h"
 #include "ui/nav.h"
 #include "esp_lvgl_port.h"
 #include "utils/bip39_filter.h"
@@ -26,6 +38,7 @@
 #include "sim_sdcard.h"
 #include <bsp/pmic.h>
 #include <SDL2/SDL.h>
+#include <errno.h>
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
@@ -35,6 +48,7 @@
 #endif
 #include <sys/stat.h>
 #include "esp_log.h"
+#include "../platform/video_sim/stb_image_write.h"
 
 #ifndef SIM_LCD_H_RES
 #define SIM_LCD_H_RES 720
@@ -42,6 +56,268 @@
 #ifndef SIM_LCD_V_RES
 #define SIM_LCD_V_RES 720
 #endif
+
+/* -------------------------------------------------------------------------- */
+/* Screenshot support                                                          */
+/* -------------------------------------------------------------------------- */
+
+static char *screenshot_path = NULL;
+static int   screenshot_delay_ms = 5000;
+
+/* Write LVGL draw-buffer as a PNG file via stb_image_write. */
+static void save_screenshot_png(const char *path, const lv_draw_buf_t *buf) {
+    uint32_t w      = buf->header.w;
+    uint32_t h      = buf->header.h;
+    uint32_t stride = buf->header.stride;
+    const void *data = buf->data;
+    int ok = stbi_write_png(path, (int)w, (int)h, 3, data, (int)stride);
+    if (!ok) {
+        fprintf(stderr, "Screenshot: stbi_write_png failed for '%s'\n", path);
+        return;
+    }
+    printf("Screenshot saved: %s (%ux%u)\n", path, w, h);
+}
+
+static void screenshot_timer_cb(lv_timer_t *timer) {
+    lv_timer_delete(timer);
+    lv_obj_t *scr = lv_screen_active();
+    lv_draw_buf_t *snap = lv_snapshot_take(scr, LV_COLOR_FORMAT_RGB888);
+    if (snap) {
+        save_screenshot_png(screenshot_path, snap);
+        lv_snapshot_free(snap);
+        exit(0);
+    } else {
+        fprintf(stderr, "Screenshot: lv_snapshot_take failed\n");
+        exit(1);
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Screenshot tour                                                             */
+/*                                                                             */
+/* Captures one PNG per major screen/menu so that agents and developers can   */
+/* verify layout on every supported board resolution.  Activated via the      */
+/* --screenshot-tour <dir> flag.  Screens that require a loaded key use the   */
+/* standard BIP39 all-abandon test vector (public, never use for real funds). */
+/* -------------------------------------------------------------------------- */
+
+#define TOUR_INTER_STEP_MS 500
+
+/* Standard BIP39 "all-abandon" 12-word public test vector. */
+#define DEMO_MNEMONIC \
+    "abandon abandon abandon abandon abandon abandon " \
+    "abandon abandon abandon abandon abandon about"
+
+/* Maximum length of the tour output directory path. */
+#define TOUR_DIR_MAX 512
+/* tour_capture() path buffer = dir + '/' + name + ".png" + NUL
+ * The longest name is "07_load_mnemonic_menu.png" (25 chars), so 256 extra is ample. */
+#define TOUR_PATH_MAX (TOUR_DIR_MAX + 256)
+
+static char tour_output_dir[TOUR_DIR_MAX];
+
+typedef enum {
+    TOUR_IDLE = -1,
+    TOUR_CAPTURE_SPLASH = 0,
+    TOUR_CAPTURE_LOGIN,
+    TOUR_CAPTURE_PIN,
+    TOUR_CAPTURE_ABOUT,
+    TOUR_CAPTURE_LOGIN_SETTINGS,
+    TOUR_CAPTURE_NEW_MNEMONIC,
+    TOUR_CAPTURE_LOAD_MNEMONIC,
+    TOUR_CAPTURE_HOME,
+    TOUR_CAPTURE_ADDRESSES,
+    TOUR_CAPTURE_BACKUP_MENU,
+    TOUR_CAPTURE_MNEMONIC_QR,
+    TOUR_CAPTURE_MNEMONIC_WORDS,
+    TOUR_CAPTURE_PUBLIC_KEY,
+    TOUR_DONE,
+} tour_state_t;
+
+static tour_state_t tour_state = TOUR_IDLE;
+static int tour_screenshot_count = 0;
+
+static void tour_advance(lv_timer_t *timer);
+
+static void tour_schedule_next(void) {
+    lv_timer_t *t = lv_timer_create(tour_advance, TOUR_INTER_STEP_MS, NULL);
+    lv_timer_set_repeat_count(t, 1);
+}
+
+static void tour_capture(const char *name) {
+    char path[TOUR_PATH_MAX];
+    lv_refr_now(NULL);
+    lv_obj_t *scr = lv_screen_active();
+    lv_draw_buf_t *snap = lv_snapshot_take(scr, LV_COLOR_FORMAT_RGB888);
+    if (!snap) {
+        fprintf(stderr, "Tour: lv_snapshot_take failed for '%s'\n", name);
+        return;
+    }
+    snprintf(path, sizeof(path), "%s/%s.png", tour_output_dir, name);
+    save_screenshot_png(path, snap);
+    lv_snapshot_free(snap);
+    tour_screenshot_count++;
+}
+
+static void tour_reset_screen(void) {
+    lv_obj_t *scr = lv_screen_active();
+    lv_obj_clean(scr);
+    theme_apply_screen(scr);
+    lv_refr_now(NULL);
+}
+
+static void tour_advance(lv_timer_t *timer) {
+    (void)timer;
+    lv_obj_t *scr = lv_screen_active();
+
+    switch (tour_state) {
+        case TOUR_CAPTURE_SPLASH:
+            /* Splash animation is running — capture it. */
+            tour_capture("01_splash");
+            /* The existing splash_done_cb fires at 3000 ms from startup.
+             * We were scheduled at 500 ms, so wait another 3500 ms so the
+             * login page is fully rendered before we capture it. */
+            tour_state = TOUR_CAPTURE_LOGIN;
+            {
+                lv_timer_t *t = lv_timer_create(tour_advance, 3500, NULL);
+                lv_timer_set_repeat_count(t, 1);
+            }
+            return;
+
+        case TOUR_CAPTURE_LOGIN:
+            /* splash_done_cb has already created the login page. */
+            tour_capture("02_login");
+            break;
+
+        case TOUR_CAPTURE_PIN:
+            login_page_destroy();
+            tour_reset_screen();
+            pin_page_create(scr, PIN_PAGE_UNLOCK, NULL, NULL);
+            lv_refr_now(NULL);
+            tour_capture("03_pin_entry");
+            pin_page_destroy();
+            break;
+
+        case TOUR_CAPTURE_ABOUT:
+            tour_reset_screen();
+            about_page_create(scr, NULL);
+            about_page_show();
+            lv_refr_now(NULL);
+            tour_capture("04_about");
+            about_page_destroy();
+            break;
+
+        case TOUR_CAPTURE_LOGIN_SETTINGS:
+            tour_reset_screen();
+            login_settings_page_create(scr, NULL);
+            login_settings_page_show();
+            lv_refr_now(NULL);
+            tour_capture("05_login_settings");
+            login_settings_page_destroy();
+            break;
+
+        case TOUR_CAPTURE_NEW_MNEMONIC:
+            tour_reset_screen();
+            new_mnemonic_menu_page_create(scr, NULL);
+            new_mnemonic_menu_page_show();
+            lv_refr_now(NULL);
+            tour_capture("06_new_mnemonic_menu");
+            new_mnemonic_menu_page_destroy();
+            break;
+
+        case TOUR_CAPTURE_LOAD_MNEMONIC:
+            tour_reset_screen();
+            load_menu_page_create(scr, NULL);
+            load_menu_page_show();
+            lv_refr_now(NULL);
+            tour_capture("07_load_mnemonic_menu");
+            load_menu_page_destroy();
+            /* Load the demo key so that wallet screens are accessible. */
+            if (!key_load_from_mnemonic(DEMO_MNEMONIC, "", false) ||
+                !wallet_init(WALLET_NETWORK_MAINNET)) {
+                fprintf(stderr, "Tour: demo key/wallet init failed\n");
+                exit(1);
+            }
+            break;
+
+        case TOUR_CAPTURE_HOME:
+            tour_reset_screen();
+            nav_init(scr);
+            home_page_create(scr);
+            home_page_show();
+            lv_refr_now(NULL);
+            tour_capture("08_home");
+            break;
+
+        case TOUR_CAPTURE_ADDRESSES:
+            home_page_hide();
+            addresses_page_create(scr, NULL);
+            addresses_page_show();
+            lv_refr_now(NULL);
+            tour_capture("09_addresses");
+            addresses_page_destroy();
+            home_page_show();
+            break;
+
+        case TOUR_CAPTURE_BACKUP_MENU:
+            home_page_hide();
+            backup_menu_page_create(scr, NULL);
+            backup_menu_page_show();
+            lv_refr_now(NULL);
+            tour_capture("10_backup_menu");
+            /* Keep backup_menu alive; sub-pages are children of scr. */
+            backup_menu_page_hide();
+            break;
+
+        case TOUR_CAPTURE_MNEMONIC_QR:
+            mnemonic_qr_page_create(scr, NULL);
+            mnemonic_qr_page_show();
+            lv_refr_now(NULL);
+            tour_capture("11_mnemonic_qr");
+            mnemonic_qr_page_destroy();
+            break;
+
+        case TOUR_CAPTURE_MNEMONIC_WORDS:
+            mnemonic_words_page_create(scr, NULL);
+            mnemonic_words_page_show();
+            lv_refr_now(NULL);
+            tour_capture("12_mnemonic_words");
+            mnemonic_words_page_destroy();
+            backup_menu_page_destroy();
+            home_page_show();
+            break;
+
+        case TOUR_CAPTURE_PUBLIC_KEY:
+            home_page_hide();
+            public_key_page_create(scr, NULL);
+            public_key_page_show();
+            lv_refr_now(NULL);
+            tour_capture("13_public_key");
+            public_key_page_destroy();
+            home_page_destroy();
+            key_unload();
+            wallet_unload();
+            break;
+
+        case TOUR_DONE:
+            printf("Screenshot tour complete: %d screenshots saved to %s/\n",
+                   tour_screenshot_count, tour_output_dir);
+            exit(0);
+
+        default:
+            break;
+    }
+
+    tour_state++;
+    tour_schedule_next();
+}
+
+static void tour_start(void) {
+    tour_state = TOUR_CAPTURE_SPLASH;
+    /* Fire first capture at 500 ms (splash animation in progress). */
+    lv_timer_t *t = lv_timer_create(tour_advance, 500, NULL);
+    lv_timer_set_repeat_count(t, 1);
+}
 
 /* -------------------------------------------------------------------------- */
 /* Forward declarations                                                        */
@@ -112,6 +388,9 @@ static void print_usage(const char *prog) {
     printf("  -W, --width <N>         Display width in pixels (default: %d)\n", SIM_LCD_H_RES);
     printf("  -H, --height <N>        Display height in pixels (default: %d)\n", SIM_LCD_V_RES);
     printf("  -w, --webcam [device]   Use webcam (default: /dev/video0)\n");
+    printf("  -s, --screenshot <path>  Save a single screenshot (PNG) after --screenshot-delay ms then exit\n");
+    printf("  -S, --screenshot-delay <ms>  Delay before screenshot (default: %d ms)\n", screenshot_delay_ms);
+    printf("  -t, --screenshot-tour <dir>  Capture a PNG for every screen/menu into <dir> then exit\n");
     printf("  -v, --verbose           Enable DEBUG-level logging\n");
     printf("  -h, --help              Show this help\n");
 }
@@ -138,20 +417,23 @@ int main(int argc, char *argv[]) {
 
     /* Parse CLI arguments before any init */
     static const struct option long_opts[] = {
-        { "qr-image", required_argument, NULL, 'q' },
-        { "qr-dir",   required_argument, NULL, 'Q' },
-        { "data-dir", required_argument, NULL, 'd' },
-        { "width",    required_argument, NULL, 'W' },
-        { "height",   required_argument, NULL, 'H' },
-        { "webcam",   optional_argument, NULL, 'w' },
-        { "verbose",  no_argument,       NULL, 'v' },
-        { "help",     no_argument,       NULL, 'h' },
+        { "qr-image",         required_argument, NULL, 'q' },
+        { "qr-dir",           required_argument, NULL, 'Q' },
+        { "data-dir",         required_argument, NULL, 'd' },
+        { "width",            required_argument, NULL, 'W' },
+        { "height",           required_argument, NULL, 'H' },
+        { "webcam",           optional_argument, NULL, 'w' },
+        { "screenshot",       required_argument, NULL, 's' },
+        { "screenshot-delay", required_argument, NULL, 'S' },
+        { "screenshot-tour",  required_argument, NULL, 't' },
+        { "verbose",          no_argument,       NULL, 'v' },
+        { "help",             no_argument,       NULL, 'h' },
         { NULL, 0, NULL, 0 }
     };
     int sim_width = SIM_LCD_H_RES;
     int sim_height = SIM_LCD_V_RES;
     int opt;
-    while ((opt = getopt_long(argc, argv, "q:Q:d:W:H:w::vh", long_opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "q:Q:d:W:H:w::s:S:t:vh", long_opts, NULL)) != -1) {
         switch (opt) {
             case 'q':
                 sim_video_set_qr_image(optarg);
@@ -175,6 +457,22 @@ int main(int argc, char *argv[]) {
             case 'w':
                 sim_video_set_webcam(optarg);
                 break;
+            case 's':
+                screenshot_path = optarg;
+                break;
+            case 'S': {
+                char *end;
+                long val = strtol(optarg, &end, 10);
+                if (*end != '\0' || val <= 0) {
+                    fprintf(stderr, "Invalid screenshot delay: %s\n", optarg);
+                    return 1;
+                }
+                screenshot_delay_ms = (int)val;
+                break;
+            }
+            case 't':
+                snprintf(tour_output_dir, sizeof(tour_output_dir), "%s", optarg);
+                break;
             case 'v':
                 esp_log_level_set("*", ESP_LOG_DEBUG);
                 break;
@@ -184,10 +482,22 @@ int main(int argc, char *argv[]) {
             default:
                 fprintf(stderr,
                     "Usage: %s [--qr-image PATH] [--qr-dir DIR] [--data-dir DIR]"
-                    " [--width N] [--height N] [--verbose]\n",
+                    " [--width N] [--height N] [--verbose]"
+                    " [--screenshot PATH] [--screenshot-tour DIR]\n",
                     argv[0]);
                 return 1;
         }
+    }
+
+    /* Activate screenshot tour after all arguments are parsed.
+     * Tour and single-screenshot modes are mutually exclusive. */
+    if (tour_output_dir[0] != '\0') {
+        if (screenshot_path) {
+            fprintf(stderr,
+                    "--screenshot and --screenshot-tour are mutually exclusive\n");
+            return 1;
+        }
+        tour_state = TOUR_CAPTURE_SPLASH;
     }
 
     printf("Kern Simulator starting (%dx%d)\n", sim_width, sim_height);
@@ -263,6 +573,24 @@ int main(int argc, char *argv[]) {
      * --------------------------------------------------------------------- */
     lv_timer_t *splash_timer = lv_timer_create(splash_done_cb, 3000, NULL);
     lv_timer_set_repeat_count(splash_timer, 1);
+
+    /* -----------------------------------------------------------------------
+     * Schedule screenshot (if requested) and exit after the specified delay.
+     * This is used by CI to capture UI screenshots for each board resolution.
+     * --------------------------------------------------------------------- */
+    if (screenshot_path) {
+        lv_timer_t *ss_timer = lv_timer_create(screenshot_timer_cb,
+                                               screenshot_delay_ms, NULL);
+        lv_timer_set_repeat_count(ss_timer, 1);
+    }
+
+    /* -----------------------------------------------------------------------
+     * Start screenshot tour (if requested via --screenshot-tour <dir>).
+     * Navigates through every screen/menu, saves one PNG each, then exits.
+     * --------------------------------------------------------------------- */
+    if (tour_state == TOUR_CAPTURE_SPLASH) {
+        tour_start();
+    }
 
     /* -----------------------------------------------------------------------
      * Main loop

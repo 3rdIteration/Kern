@@ -66,6 +66,49 @@ jobs:
         if-no-files-found: error
         retention-days: 30
 
+  screenshots:
+    needs: [format-check, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - name: Install simulator dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential libsdl2-dev libmbedtls-dev
+    - name: Build simulator and capture screenshots for all boards
+      run: |
+        mkdir -p screenshots
+        for board in wave_4b wave_35 wave_5 crowpanel_101; do
+          case $board in
+            wave_35)       W=320;  H=480  ;;
+            wave_5)        W=720;  H=1280 ;;
+            crowpanel_101) W=1024; H=600  ;;
+            *)             W=720;  H=720  ;;
+          esac
+          echo "Building simulator for $board (${W}x${H})..."
+          cmake -B "simulator/build_${board}" -S simulator \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSIM_BOARD="$board" \
+            -DSIM_LCD_H_RES="$W" \
+            -DSIM_LCD_V_RES="$H"
+          cmake --build "simulator/build_${board}" -- -j$(nproc)
+          echo "Taking screenshot tour for $board..."
+          mkdir -p "screenshots/${board}_${W}x${H}"
+          SDL_VIDEODRIVER=offscreen SDL_RENDER_DRIVER=software \
+          "simulator/build_${board}/kern_simulator" \
+            --screenshot-tour "screenshots/${board}_${W}x${H}"
+        done
+    - name: Upload UI screenshots
+      uses: actions/upload-artifact@v4
+      with:
+        name: ui-screenshots
+        path: screenshots/
+        retention-days: 30
   deploy-flasher:
     needs: [build]
     runs-on: ubuntu-latest
