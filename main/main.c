@@ -1,3 +1,4 @@
+#include "core/camera.h"
 #include "core/pin.h"
 #include "core/session.h"
 #include "core/settings.h"
@@ -118,6 +119,9 @@ void app_main(void) {
 
   // Set up session expiry callback
   session_set_expired_callback(session_expired_handler);
+
+  // Detect camera presence before any UI pages are created
+  camera_detect();
 
   // Lock display again for modifications
   bsp_display_lock(0);

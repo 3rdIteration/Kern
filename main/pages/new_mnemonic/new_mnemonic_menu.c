@@ -1,6 +1,7 @@
 // New Mnemonic Menu Page
 
 #include "new_mnemonic_menu.h"
+#include "../../core/camera.h"
 #include "../../ui/dialog.h"
 #include "../../ui/menu.h"
 #include "../../ui/theme.h"
@@ -144,6 +145,9 @@ void new_mnemonic_menu_page_create(lv_obj_t *parent, void (*return_cb)(void)) {
   ui_menu_add_entry(new_mnemonic_menu, "From Dice Rolls", from_dice_rolls_cb);
   ui_menu_add_entry(new_mnemonic_menu, "From Words", from_words_cb);
   ui_menu_add_entry(new_mnemonic_menu, "From Camera", from_camera_cb);
+  if (!camera_is_available()) {
+    ui_menu_set_entry_enabled(new_mnemonic_menu, 2, false);
+  }
   ui_menu_show(new_mnemonic_menu);
 }
 

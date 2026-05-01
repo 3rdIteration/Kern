@@ -104,6 +104,7 @@ static const esp_video_init_config_t s_cam_config = {
 
 static app_video_t app_video = {.video_fd = -1};
 static bool s_initialized = false;
+static bool s_camera_available = false;
 
 static esp_err_t stream_start(int fd);
 static esp_err_t stream_stop(int fd);
@@ -557,3 +558,25 @@ esp_err_t app_video_deinit(void) {
   s_initialized = false;
   return ESP_OK;
 }
+
+bool app_video_detect(i2c_master_bus_handle_t i2c_handle) {
+  esp_err_t ret = app_video_main(i2c_handle);
+  if (ret != ESP_OK) {
+    ESP_LOGW(TAG, "Camera not detected: init failed (%s)",
+             esp_err_to_name(ret));
+    return false;
+  }
+
+  int fd = app_video_open(CAM_DEV_PATH, APP_VIDEO_FMT_RGB565);
+  if (fd < 0) {
+    ESP_LOGW(TAG, "Camera not detected: device open failed");
+    return false;
+  }
+
+  close(fd);
+  s_camera_available = true;
+  ESP_LOGI(TAG, "Camera detected");
+  return true;
+}
+
+bool app_video_is_available(void) { return s_camera_available; }

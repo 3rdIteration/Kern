@@ -314,6 +314,15 @@ esp_err_t app_video_deinit(void) {
     return ESP_OK;
 }
 
+bool app_video_detect(i2c_master_bus_handle_t i2c_handle) {
+    (void)i2c_handle;
+    return true; /* simulator always has a camera */
+}
+
+bool app_video_is_available(void) {
+    return true; /* simulator always has a camera */
+}
+
 /* --- Simulator control API --- */
 
 void sim_video_set_qr_image(const char *path) {

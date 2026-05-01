@@ -2,6 +2,7 @@
 
 #include "load_menu.h"
 #include "../../core/base43.h"
+#include "../../core/camera.h"
 #include "../../core/kef.h"
 #include "../../core/storage.h"
 #include "../../qr/scanner.h"
@@ -164,6 +165,9 @@ void load_menu_page_create(lv_obj_t *parent, void (*return_cb)(void)) {
     return;
 
   ui_menu_add_entry(load_menu, "From QR Code", from_qr_code_cb);
+  if (!camera_is_available()) {
+    ui_menu_set_entry_enabled(load_menu, 0, false);
+  }
   ui_menu_add_entry(load_menu, "From Manual Input", from_manual_input_cb);
   ui_menu_add_entry(load_menu, "From Flash", from_flash_cb);
   ui_menu_add_entry(load_menu, "From SD Card", from_sd_cb);
