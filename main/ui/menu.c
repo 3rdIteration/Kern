@@ -14,8 +14,13 @@ static void menu_button_event_cb(lv_event_t *e) {
   for (int i = 0; i < menu->config.entry_count; i++) {
     if (menu->buttons[i] == btn) {
       menu->config.selected_index = i;
-      if (menu->config.entries[i].enabled && menu->config.entries[i].callback)
-        menu->config.entries[i].callback();
+      if (menu->config.entries[i].enabled) {
+        if (menu->config.entries[i].callback)
+          menu->config.entries[i].callback();
+      } else {
+        if (menu->config.entries[i].disabled_callback)
+          menu->config.entries[i].disabled_callback();
+      }
       break;
     }
   }
@@ -193,6 +198,14 @@ bool ui_menu_set_entry_enabled(ui_menu_t *menu, int index, bool enabled) {
     lv_obj_set_style_text_color(label,
                                 enabled ? main_color() : disabled_color(), 0);
   }
+  return true;
+}
+
+bool ui_menu_set_entry_disabled_callback(ui_menu_t *menu, int index,
+                                         ui_menu_callback_t callback) {
+  if (!menu || index < 0 || index >= menu->config.entry_count)
+    return false;
+  menu->config.entries[index].disabled_callback = callback;
   return true;
 }
 
