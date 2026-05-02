@@ -571,14 +571,20 @@ esp_err_t storage_load_psbt(const char *filename, uint8_t **data_out,
 
 esp_err_t storage_list_psbts(storage_location_t loc, char ***filenames_out,
                              int *count_out) {
-  (void)loc; /* PSBTs are SD-only; location parameter accepted for interface
-                consistency */
+  if (loc != STORAGE_SD) {
+    if (filenames_out)
+      *filenames_out = NULL;
+    if (count_out)
+      *count_out = 0;
+    return ESP_ERR_INVALID_ARG;
+  }
   const char *exts[] = {STORAGE_PSBT_EXT};
   return item_list(&psbt_config, STORAGE_SD, exts, 1, filenames_out, count_out);
 }
 
 esp_err_t storage_delete_psbt(storage_location_t loc, const char *filename) {
-  (void)loc; /* PSBTs are SD-only */
+  if (loc != STORAGE_SD)
+    return ESP_ERR_INVALID_ARG;
   return item_delete(&psbt_config, STORAGE_SD, filename);
 }
 

@@ -196,7 +196,8 @@ esp_err_t storage_load_psbt(const char *filename, uint8_t **data_out,
 /**
  * List stored PSBT files on the SD card.
  *
- * @param loc            Must be STORAGE_SD (PSBTs are SD-only)
+ * @param loc            Must be STORAGE_SD; returns ESP_ERR_INVALID_ARG
+ * otherwise
  * @param filenames_out  Receives array of filename strings (caller frees
  *                       with storage_free_file_list)
  * @param count_out      Receives count
@@ -207,7 +208,7 @@ esp_err_t storage_list_psbts(storage_location_t loc, char ***filenames_out,
 /**
  * Delete a stored PSBT file from the SD card.
  *
- * @param loc       Must be STORAGE_SD
+ * @param loc       Must be STORAGE_SD; returns ESP_ERR_INVALID_ARG otherwise
  * @param filename  Filename to delete
  */
 esp_err_t storage_delete_psbt(storage_location_t loc, const char *filename);
