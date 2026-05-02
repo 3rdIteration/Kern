@@ -221,3 +221,26 @@ bool app_video_has_focus_motor(int video_fd);
  * @return ESP_OK on success, or ESP_FAIL on failure.
  */
 esp_err_t app_video_deinit(void);
+
+/**
+ * @brief Probe whether a camera is physically present.
+ *
+ * Tries to initialize the video subsystem and open the camera device,
+ * then immediately closes it. Caches the result for subsequent calls to
+ * app_video_is_available(). Should be called once at boot, before any
+ * camera-dependent UI page is shown.
+ *
+ * @param i2c_bus_handle I2C bus handle (or NULL to use internal SCCB init)
+ * @return true if camera was detected, false otherwise
+ */
+bool app_video_detect(i2c_master_bus_handle_t i2c_bus_handle);
+
+/**
+ * @brief Returns whether a camera was detected at boot.
+ *
+ * Returns the result cached by app_video_detect(). Returns false if
+ * app_video_detect() has not been called yet.
+ *
+ * @return true if camera is available, false otherwise
+ */
+bool app_video_is_available(void);

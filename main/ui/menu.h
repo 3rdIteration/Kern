@@ -13,6 +13,7 @@ typedef void (*ui_menu_action_callback_t)(int index);
 typedef struct {
   ui_menu_callback_t callback;
   ui_menu_action_callback_t action_callback;
+  ui_menu_callback_t disabled_callback;
   bool enabled;
 } ui_menu_entry_t;
 
@@ -37,6 +38,8 @@ ui_menu_t *ui_menu_create(lv_obj_t *parent, const char *title,
 bool ui_menu_add_entry(ui_menu_t *menu, const char *name,
                        ui_menu_callback_t callback);
 bool ui_menu_set_entry_enabled(ui_menu_t *menu, int index, bool enabled);
+bool ui_menu_set_entry_disabled_callback(ui_menu_t *menu, int index,
+                                         ui_menu_callback_t callback);
 int ui_menu_get_selected(ui_menu_t *menu);
 void ui_menu_show(ui_menu_t *menu);
 void ui_menu_hide(ui_menu_t *menu);
