@@ -25,6 +25,7 @@
 #include "../shared/address_checker.h"
 #include "../shared/descriptor_loader.h"
 #include <esp_log.h>
+#include <esp_timer.h>
 #include <lvgl.h>
 #include <stdio.h>
 #include <string.h>
@@ -56,6 +57,7 @@ static lv_obj_t *scan_screen = NULL;
 static lv_obj_t *psbt_info_container = NULL;
 static sankey_diagram_t *tx_diagram = NULL;
 static ui_menu_t *multisig_menu = NULL;
+static ui_menu_t *post_sign_menu = NULL;
 static void (*return_callback)(void) = NULL;
 static void (*saved_return_callback)(void) = NULL;
 
@@ -95,6 +97,7 @@ static void message_sign_button_cb(lv_event_t *e);
 static void handle_descriptor_content(const char *descriptor_str);
 static void handle_address_content(const char *content);
 static void handle_mnemonic_content(const char *data, size_t len);
+static void show_post_sign_menu(void);
 
 // Format satoshis as Bitcoin with visual grouping: "1.00 000 000"
 static void format_btc(char *buf, size_t buf_size, uint64_t sats) {
@@ -1016,20 +1019,13 @@ static void deferred_sign_cb(lv_timer_t *timer) {
 
   saved_return_callback = return_callback;
 
-  int export_format =
-      (scanned_qr_format == -1) ? FORMAT_NONE : scanned_qr_format;
-
-  if (!qr_viewer_page_create_with_format(lv_screen_active(), export_format,
-                                         signed_psbt_base64, "Signed PSBT",
-                                         return_from_qr_viewer_cb)) {
-    dialog_show_error("Failed to create QR viewer", return_callback, 2000);
-    return;
+  // Hide the PSBT info display and show the post-sign options menu so the
+  // user can choose to display the signed PSBT as a QR code or save it to
+  // the SD card.
+  if (psbt_info_container) {
+    lv_obj_add_flag(psbt_info_container, LV_OBJ_FLAG_HIDDEN);
   }
-
-  scan_page_hide();
-  scan_page_destroy();
-
-  qr_viewer_page_show();
+  show_post_sign_menu();
 }
 
 static void sign_button_cb(lv_event_t *e) {
@@ -1325,6 +1321,139 @@ static void message_sign_button_cb(lv_event_t *e) {
   qr_viewer_page_show();
 }
 
+// --- Post-sign options menu ---
+
+static void post_sign_back_cb(void) {
+  if (post_sign_menu) {
+    ui_menu_destroy(post_sign_menu);
+    post_sign_menu = NULL;
+  }
+  scan_page_hide();
+  scan_page_destroy();
+  if (saved_return_callback) {
+    void (*cb)(void) = saved_return_callback;
+    saved_return_callback = NULL;
+    cb();
+  }
+}
+
+static void post_sign_show_qr_cb(void) {
+  if (post_sign_menu) {
+    ui_menu_destroy(post_sign_menu);
+    post_sign_menu = NULL;
+  }
+
+  if (!qr_viewer_page_create_with_format(lv_screen_active(), scanned_qr_format,
+                                         signed_psbt_base64, "Signed PSBT",
+                                         return_from_qr_viewer_cb)) {
+    dialog_show_error("Failed to create QR viewer", saved_return_callback,
+                      2000);
+    return;
+  }
+
+  scan_page_hide();
+  scan_page_destroy();
+  qr_viewer_page_show();
+}
+
+static void post_sign_save_sd_done_cb(void *user_data) {
+  (void)user_data;
+  scan_page_hide();
+  scan_page_destroy();
+  if (saved_return_callback) {
+    void (*cb)(void) = saved_return_callback;
+    saved_return_callback = NULL;
+    cb();
+  }
+}
+
+static void post_sign_save_sd_err_cb(void) {
+  scan_page_hide();
+  scan_page_destroy();
+  if (saved_return_callback) {
+    void (*cb)(void) = saved_return_callback;
+    saved_return_callback = NULL;
+    cb();
+  }
+}
+
+static void post_sign_save_sd_cb(void) {
+  if (!signed_psbt_base64) {
+    dialog_show_error("No signed PSBT available", NULL, 2000);
+    return;
+  }
+
+  // Decode the base64 string back to a wally_psbt so we can serialize to
+  // raw binary (standard .psbt file format per BIP-174).
+  struct wally_psbt *psbt_temp = NULL;
+  if (wally_psbt_from_base64(signed_psbt_base64, 0, &psbt_temp) != WALLY_OK) {
+    dialog_show_error("Failed to process signed PSBT", NULL, 2000);
+    return;
+  }
+
+  size_t psbt_len = 0;
+  if (wally_psbt_get_length(psbt_temp, 0, &psbt_len) != WALLY_OK ||
+      psbt_len == 0) {
+    wally_psbt_free(psbt_temp);
+    dialog_show_error("Failed to process signed PSBT", NULL, 2000);
+    return;
+  }
+
+  uint8_t *psbt_bytes = malloc(psbt_len);
+  if (!psbt_bytes) {
+    wally_psbt_free(psbt_temp);
+    dialog_show_error("Out of memory", NULL, 2000);
+    return;
+  }
+
+  size_t written = 0;
+  int wret = wally_psbt_to_bytes(psbt_temp, 0, psbt_bytes, psbt_len, &written);
+  wally_psbt_free(psbt_temp);
+
+  if (wret != WALLY_OK) {
+    free(psbt_bytes);
+    dialog_show_error("Failed to serialize signed PSBT", NULL, 2000);
+    return;
+  }
+
+  // Generate a unique filename from the time since boot (microseconds).
+  char id[32];
+  snprintf(id, sizeof(id), "signed_%llu",
+           (unsigned long long)esp_timer_get_time());
+
+  if (post_sign_menu) {
+    ui_menu_destroy(post_sign_menu);
+    post_sign_menu = NULL;
+  }
+
+  esp_err_t err = storage_save_psbt(id, psbt_bytes, written);
+  free(psbt_bytes);
+
+  if (err != ESP_OK) {
+    dialog_show_error("Failed to save PSBT to SD card",
+                      post_sign_save_sd_err_cb, 0);
+  } else {
+    dialog_show_info("Saved", "Signed PSBT saved to SD card",
+                     post_sign_save_sd_done_cb, NULL, DIALOG_STYLE_OVERLAY);
+  }
+}
+
+static void show_post_sign_menu(void) {
+  if (!scan_screen)
+    return;
+
+  post_sign_menu =
+      ui_menu_create(scan_screen, "Signed PSBT", post_sign_back_cb);
+  if (!post_sign_menu) {
+    dialog_show_error("Failed to create menu", saved_return_callback, 0);
+    return;
+  }
+
+  ui_menu_add_entry(post_sign_menu, "Show as QR Code", post_sign_show_qr_cb);
+  ui_menu_add_entry(post_sign_menu, "Save to SD Card", post_sign_save_sd_cb);
+  ui_menu_show(post_sign_menu);
+}
+
 void scan_page_create(lv_obj_t *parent, void (*return_cb)(void)) {
   if (!parent || !key_is_loaded()) {
     return;
@@ -1335,6 +1464,32 @@ void scan_page_create(lv_obj_t *parent, void (*return_cb)(void)) {
   scan_screen = theme_create_page_container(parent);
   qr_scanner_page_create(NULL, return_from_qr_scanner_cb);
   qr_scanner_page_show();
+}
+
+void scan_page_create_with_psbt(lv_obj_t *parent, const uint8_t *psbt_bytes,
+                                size_t psbt_len, void (*return_cb)(void)) {
+  if (!parent || !key_is_loaded() || !psbt_bytes || psbt_len == 0)
+    return;
+
+  // Parse before creating any UI so we can report errors cleanly.
+  cleanup_psbt_data();
+  if (wally_psbt_from_bytes(psbt_bytes, psbt_len, 0, &current_psbt) !=
+      WALLY_OK) {
+    dialog_show_error("Invalid PSBT file", return_cb, 0);
+    return;
+  }
+
+  return_callback = return_cb;
+  scan_screen = theme_create_page_container(parent);
+  scanned_qr_format = FORMAT_NONE;
+
+  if (psbt_is_multisig(current_psbt) && !wallet_has_descriptor()) {
+    show_multisig_options_menu();
+  } else {
+    if (!create_psbt_info_display()) {
+      dialog_show_error("Invalid PSBT data", return_cb, 0);
+    }
+  }
 }
 
 void scan_page_show(void) {
@@ -1359,6 +1514,11 @@ void scan_page_destroy(void) {
   cleanup_psbt_data();
 
   SECURE_FREE_STRING(scanned_mnemonic);
+
+  if (post_sign_menu) {
+    ui_menu_destroy(post_sign_menu);
+    post_sign_menu = NULL;
+  }
 
   if (multisig_menu) {
     ui_menu_destroy(multisig_menu);

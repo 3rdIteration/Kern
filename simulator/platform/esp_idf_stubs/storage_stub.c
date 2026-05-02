@@ -105,3 +105,31 @@ bool storage_descriptor_exists(storage_location_t loc, const char *id,
     (void)loc; (void)id; (void)encrypted;
     return false;
 }
+
+/* --- PSBT storage (SD-only) --- */
+
+esp_err_t storage_save_psbt(const char *id, const uint8_t *data, size_t len) {
+    (void)id; (void)data; (void)len;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t storage_load_psbt(const char *filename, uint8_t **data_out,
+                             size_t *len_out) {
+    (void)filename;
+    if (data_out) *data_out = NULL;
+    if (len_out)  *len_out  = 0;
+    return ESP_ERR_NOT_FOUND;
+}
+
+esp_err_t storage_list_psbts(storage_location_t loc, char ***names,
+                              int *count) {
+    (void)loc;
+    if (names)  *names = NULL;
+    if (count)  *count = 0;
+    return ESP_OK;
+}
+
+esp_err_t storage_delete_psbt(storage_location_t loc, const char *fn) {
+    (void)loc; (void)fn;
+    return ESP_ERR_NOT_FOUND;
+}

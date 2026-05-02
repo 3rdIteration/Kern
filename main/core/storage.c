@@ -117,6 +117,11 @@ static const storage_item_config_t descriptor_config = {
     .sd_dir = STORAGE_SD_DESCRIPTORS_DIR,
 };
 
+static const storage_item_config_t psbt_config = {
+    .flash_prefix = "", /* PSBTs are SD-only; flash prefix unused */
+    .sd_dir = STORAGE_SD_PSBTS_DIR,
+};
+
 /* ========== Initialization ========== */
 
 esp_err_t storage_init(void) {
@@ -549,6 +554,32 @@ bool storage_descriptor_exists(storage_location_t loc, const char *id,
   const char *ext =
       encrypted ? STORAGE_DESCRIPTOR_EXT_KEF : STORAGE_DESCRIPTOR_EXT_TXT;
   return item_exists(&descriptor_config, loc, id, ext);
+}
+
+/* ========== PSBT public API (SD-only) ========== */
+
+esp_err_t storage_save_psbt(const char *id, const uint8_t *data, size_t len) {
+  return item_save(&psbt_config, STORAGE_SD, id, data, len, STORAGE_PSBT_EXT,
+                   false /* raw binary, no base64 */);
+}
+
+esp_err_t storage_load_psbt(const char *filename, uint8_t **data_out,
+                            size_t *len_out) {
+  return item_load_file(&psbt_config, STORAGE_SD, filename, data_out, len_out,
+                        false /* raw binary */);
+}
+
+esp_err_t storage_list_psbts(storage_location_t loc, char ***filenames_out,
+                             int *count_out) {
+  (void)loc; /* PSBTs are SD-only; location parameter accepted for interface
+                consistency */
+  const char *exts[] = {STORAGE_PSBT_EXT};
+  return item_list(&psbt_config, STORAGE_SD, exts, 1, filenames_out, count_out);
+}
+
+esp_err_t storage_delete_psbt(storage_location_t loc, const char *filename) {
+  (void)loc; /* PSBTs are SD-only */
+  return item_delete(&psbt_config, STORAGE_SD, filename);
 }
 
 /* ========== Shared utilities ========== */
