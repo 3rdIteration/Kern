@@ -313,22 +313,28 @@ lv_obj_t *dialog_show_progress(const char *title, const char *message,
 
 void dialog_show_message(const char *title, const char *message) {
   lv_obj_t *modal = lv_obj_create(lv_screen_active());
-  lv_obj_set_size(modal, 400, 220);
+  lv_obj_set_size(modal, 400, 260);
   lv_obj_center(modal);
   theme_apply_frame(modal);
+  /* Override frame opacity so no background content bleeds through */
+  lv_obj_set_style_bg_opa(modal, LV_OPA_COVER, 0);
 
   lv_obj_t *title_label = theme_create_label(modal, title, false);
   lv_obj_set_style_text_font(title_label, theme_font_small(), 0);
   lv_obj_align(title_label, LV_ALIGN_TOP_MID, 0, 0);
+  lv_obj_update_layout(title_label);
+  int32_t title_h = lv_obj_get_height(title_label);
 
   lv_obj_t *msg_label = theme_create_label(modal, message, false);
   lv_obj_set_width(msg_label, 340);
   lv_label_set_long_mode(msg_label, LV_LABEL_LONG_WRAP);
   lv_obj_set_style_text_align(msg_label, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_align(msg_label, LV_ALIGN_CENTER, 0, -10);
+  /* Position message below title so they never overlap */
+  lv_obj_align(msg_label, LV_ALIGN_TOP_MID, 0, title_h + 8);
 
   lv_obj_t *btn = theme_create_button(modal, "OK", true);
   lv_obj_set_size(btn, 100, theme_get_min_touch_size());
-  lv_obj_align(btn, LV_ALIGN_BOTTOM_MID, 0, 0);
+  /* Keep 8px gap from the dialog's bottom padding edge */
+  lv_obj_align(btn, LV_ALIGN_BOTTOM_MID, 0, -8);
   lv_obj_add_event_cb(btn, message_close_cb, LV_EVENT_CLICKED, modal);
 }
