@@ -188,9 +188,10 @@ bool ui_menu_set_entry_enabled(ui_menu_t *menu, int index, bool enabled) {
   menu->config.entries[index].enabled = enabled;
   if (enabled) {
     lv_obj_clear_state(menu->buttons[index], LV_STATE_DISABLED);
-  } else {
-    lv_obj_add_state(menu->buttons[index], LV_STATE_DISABLED);
   }
+  /* Don't call lv_obj_add_state(LV_STATE_DISABLED) when disabling: that flag
+   * blocks all LVGL input events, which would prevent our disabled_callback
+   * from firing.  Visual feedback is provided by the label colour alone. */
 
   /* Update label color to reflect enabled/disabled state */
   lv_obj_t *label = lv_obj_get_child(menu->buttons[index], 0);
