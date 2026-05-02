@@ -313,7 +313,7 @@ lv_obj_t *dialog_show_progress(const char *title, const char *message,
 
 void dialog_show_message(const char *title, const char *message) {
   lv_obj_t *modal = lv_obj_create(lv_screen_active());
-  lv_obj_set_size(modal, 400, 260);
+  lv_obj_set_size(modal, 400, 320);
   lv_obj_center(modal);
   theme_apply_frame(modal);
   /* Override frame opacity so no background content bleeds through */
