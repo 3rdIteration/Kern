@@ -41,6 +41,22 @@ static const char *TAG = "stc8h1kxx";
 #define REG_ADC_VOLTAGE 0x00 /* u32 LE, raw divider voltage in mV    */
 #define REG_BAT_VOLTAGE 0x04 /* u32 LE, actual battery voltage in mV */
 #define REG_BAT_LEVEL   0x08 /* u8,  state-of-charge 0–100 %         */
+#define REG_BAT_STATE   0x09 /* u8,  EM_BAT_CHARGE_STATE             */
+#define REG_LED_STATE   0x0A /* u8,  EM_LED_STATE                    */
+
+/* EM_BAT_CHARGE_STATE values */
+#define BAT_CHARGE_IDLE          0
+#define BAT_CHARGE_CHARGING      1
+#define BAT_CHARGE_FULLY_CHARGED 2
+#define BAT_CHARGE_NO_CHARGE     3
+#define BAT_CHARGE_ERROR         4
+
+/* EM_LED_STATE values – directly reflect the physical indicator LED */
+#define LED_IDLE          0
+#define LED_CHARGING      1 /* red LED on – actively charging        */
+#define LED_FULLY_CHARGED 2 /* green LED on – charge complete        */
+#define LED_NO_CHARGE     3 /* no charger connected                  */
+#define LED_LOW_POWER     4 /* 0.5 Hz red blink – low battery        */
 
 #define I2C_TIMEOUT_MS 100
 
@@ -147,16 +163,53 @@ esp_err_t bsp_pmic_get_battery_mv(uint16_t *mv)
 
 esp_err_t bsp_pmic_get_charge_status(bsp_pmic_chg_t *status)
 {
-    /* The STC8H1K08 / TP4059 combination on the CrowPanel does not expose
-       reliable charge-status data over I²C; charging state is not supported. */
-    (void)status;
-    return ESP_ERR_NOT_SUPPORTED;
+    if (!pmic_available || !status) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    uint8_t bat_state = 0;
+    ESP_RETURN_ON_ERROR(pmic_read_u8(REG_BAT_STATE, &bat_state), TAG,
+                        "read bat_state");
+    uint8_t led_state = 0;
+    ESP_RETURN_ON_ERROR(pmic_read_u8(REG_LED_STATE, &led_state), TAG,
+                        "read led_state");
+
+    /*
+     * Some CrowPanel STC8H firmware revisions do not set bat_state=1
+     * during active charging; they only update the led_state register.
+     * Check both so that either one can signal the charging condition.
+     */
+    if (bat_state == BAT_CHARGE_CHARGING || led_state == LED_CHARGING) {
+        *status = BSP_PMIC_CHG_CHARGING;
+    } else if (bat_state == BAT_CHARGE_FULLY_CHARGED ||
+               led_state == LED_FULLY_CHARGED) {
+        *status = BSP_PMIC_CHG_FULL;
+    } else if (bat_state == BAT_CHARGE_NO_CHARGE ||
+               bat_state == BAT_CHARGE_ERROR ||
+               led_state == LED_NO_CHARGE) {
+        *status = BSP_PMIC_CHG_ABSENT;
+    } else {
+        *status = BSP_PMIC_CHG_DISCHARGING;
+    }
+    return ESP_OK;
 }
 
 bool bsp_pmic_is_vbus_present(void)
 {
-    /* Charge detection is not supported on this board. */
-    return false;
+    if (!pmic_available) {
+        return false;
+    }
+    uint8_t bat_state = 0;
+    uint8_t led_state = 0;
+    if (pmic_read_u8(REG_BAT_STATE, &bat_state) != ESP_OK) {
+        return false;
+    }
+    if (pmic_read_u8(REG_LED_STATE, &led_state) != ESP_OK) {
+        return false;
+    }
+    return (bat_state == BAT_CHARGE_CHARGING ||
+            bat_state == BAT_CHARGE_FULLY_CHARGED ||
+            led_state == LED_CHARGING ||
+            led_state == LED_FULLY_CHARGED);
 }
 
 bool bsp_pmic_is_available(void) { return pmic_available; }
