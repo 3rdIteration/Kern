@@ -147,8 +147,6 @@ void new_mnemonic_menu_page_create(lv_obj_t *parent, void (*return_cb)(void)) {
   ui_menu_add_entry(new_mnemonic_menu, "From Camera", from_camera_cb);
   if (!camera_is_available()) {
     ui_menu_set_entry_enabled(new_mnemonic_menu, 2, false);
-    ui_menu_set_entry_disabled_callback(new_mnemonic_menu, 2,
-                                        camera_show_no_camera_dialog);
   }
   ui_menu_show(new_mnemonic_menu);
 }

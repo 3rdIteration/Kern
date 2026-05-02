@@ -191,10 +191,9 @@ void theme_apply_touch_button(lv_obj_t *btn, bool is_primary) {
   lv_obj_set_style_bg_color(btn, COLOR_ORANGE, LV_STATE_PRESSED);
   lv_obj_set_style_bg_opa(btn, LV_OPA_50, LV_STATE_PRESSED);
 
-  // Disabled state - dark panel background so the button is visibly distinct
-  lv_obj_set_style_bg_color(btn, COLOR_PANEL, LV_STATE_DISABLED);
-  lv_obj_set_style_bg_opa(btn, LV_OPA_80, LV_STATE_DISABLED);
+  // Disabled state
   lv_obj_set_style_text_color(btn, COLOR_DISABLED, LV_STATE_DISABLED);
+  lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, LV_STATE_DISABLED);
 
   lv_obj_clear_flag(btn, LV_OBJ_FLAG_CLICK_FOCUSABLE);
 }

@@ -167,8 +167,6 @@ void load_menu_page_create(lv_obj_t *parent, void (*return_cb)(void)) {
   ui_menu_add_entry(load_menu, "From QR Code", from_qr_code_cb);
   if (!camera_is_available()) {
     ui_menu_set_entry_enabled(load_menu, 0, false);
-    ui_menu_set_entry_disabled_callback(load_menu, 0,
-                                        camera_show_no_camera_dialog);
   }
   ui_menu_add_entry(load_menu, "From Manual Input", from_manual_input_cb);
   ui_menu_add_entry(load_menu, "From Flash", from_flash_cb);
