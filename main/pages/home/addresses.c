@@ -508,6 +508,9 @@ void addresses_page_create(lv_obj_t *parent, void (*return_cb)(void)) {
   lv_obj_set_style_text_font(scan_label, theme_font_medium(), 0);
   lv_obj_center(scan_label);
   lv_obj_add_event_cb(scan_button, scan_button_cb, LV_EVENT_CLICKED, NULL);
+  if (!camera_is_available()) {
+    lv_obj_add_state(scan_button, LV_STATE_DISABLED);
+  }
 
   // Hide navigation buttons if multisig without descriptor
   if (needs_descriptor) {
