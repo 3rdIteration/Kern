@@ -18,7 +18,7 @@ if(NOT DEFINED SIM_BOARD)
 endif()
 
 # Board feature flags
-if(SIM_BOARD STREQUAL "wave_35")
+if(SIM_BOARD STREQUAL "wave_35" OR SIM_BOARD STREQUAL "crowpanel_101")
   set(BSP_HAS_PMIC TRUE)
 endif()
 
@@ -365,6 +365,7 @@ target_compile_definitions(kern_simulator PRIVATE
     $<$<STREQUAL:${SIM_BOARD},wave_4b>:CONFIG_KERN_BOARD_WAVE_4B=1>
     $<$<STREQUAL:${SIM_BOARD},wave_35>:CONFIG_KERN_BOARD_WAVE_35=1>
     $<$<STREQUAL:${SIM_BOARD},wave_5>:CONFIG_KERN_BOARD_WAVE_5=1>
+    $<$<STREQUAL:${SIM_BOARD},crowpanel_101>:CONFIG_KERN_BOARD_CROWPANEL_101=1>
 )
 
 target_compile_options(kern_simulator PRIVATE

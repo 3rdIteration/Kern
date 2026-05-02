@@ -5,7 +5,8 @@
 
 /**
  * Create a battery percentage label with auto-refresh timer.
- * Color is green above 20%, red otherwise. Shows a charge symbol when charging.
+ * Color and symbol reflect charge state: orange ⚡ when charging, green ✓
+ * when fully charged, green when discharging above 20%, red at or below 20%.
  * Returns NULL if PMIC is unavailable. The refresh timer is automatically
  * deleted when the label is destroyed.
  *
