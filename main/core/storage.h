@@ -174,6 +174,9 @@ bool storage_descriptor_exists(storage_location_t loc, const char *id,
 #define STORAGE_SD_PSBTS_DIR "/sdcard/kern/psbts"
 #define STORAGE_PSBT_EXT ".psbt"
 
+/** Maximum raw PSBT file size accepted when loading from SD card (512 KB). */
+#define STORAGE_MAX_PSBT_SIZE (512U * 1024U)
+
 /**
  * Save a raw binary PSBT to the SD card.
  *

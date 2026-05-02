@@ -21,6 +21,10 @@ static void load_selected(int idx, const char *filename) {
   size_t len = 0;
 
   esp_err_t ret = storage_load_psbt(filename, &data, &len);
+  if (ret == ESP_ERR_INVALID_SIZE) {
+    dialog_show_error("PSBT file too large", NULL, 0);
+    return;
+  }
   if (ret != ESP_OK) {
     dialog_show_error("Failed to load PSBT file", NULL, 0);
     return;
