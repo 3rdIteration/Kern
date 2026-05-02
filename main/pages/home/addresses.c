@@ -1,6 +1,7 @@
 // Addresses Page - Displays receive and change addresses
 
 #include "addresses.h"
+#include "../../core/camera.h"
 #include "../../core/storage.h"
 #include "../../core/wallet.h"
 #include "../../qr/scanner.h"
@@ -433,6 +434,10 @@ static void return_from_scan_cb(void) {
 
 static void scan_button_cb(lv_event_t *e) {
   (void)e;
+  if (!camera_is_available()) {
+    camera_show_no_camera_dialog();
+    return;
+  }
   addresses_page_hide();
   qr_scanner_page_create(NULL, return_from_scan_cb);
   qr_scanner_page_show();
