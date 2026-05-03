@@ -117,6 +117,11 @@ static const storage_item_config_t descriptor_config = {
     .sd_dir = STORAGE_SD_DESCRIPTORS_DIR,
 };
 
+static const storage_item_config_t psbt_config = {
+    .flash_prefix = "", /* PSBTs are SD-only; flash prefix unused */
+    .sd_dir = STORAGE_SD_PSBTS_DIR,
+};
+
 /* ========== Initialization ========== */
 
 esp_err_t storage_init(void) {
@@ -282,11 +287,19 @@ static esp_err_t item_load_file(const storage_item_config_t *cfg,
   *data_out = NULL;
   *len_out = 0;
 
+  /* Reject filenames that would silently truncate the path buffer.
+   * path[] is 96 bytes; the constructed path is "<dir>/<filename>\0". */
+#define ITEM_PATH_BUF_SIZE 96
+  const char *dir =
+      (loc == STORAGE_FLASH) ? STORAGE_FLASH_BASE_PATH : cfg->sd_dir;
+  if (strlen(dir) + 1 + strlen(filename) + 1 > ITEM_PATH_BUF_SIZE)
+    return ESP_ERR_INVALID_ARG;
+
   esp_err_t ret = item_init_location(cfg, loc);
   if (ret != ESP_OK)
     return ret;
 
-  char path[96];
+  char path[ITEM_PATH_BUF_SIZE];
   item_build_path(cfg, loc, filename, path, sizeof(path));
 
   if (loc == STORAGE_FLASH)
@@ -435,11 +448,17 @@ static esp_err_t item_delete(const storage_item_config_t *cfg,
   if (!filename)
     return ESP_ERR_INVALID_ARG;
 
+  /* Reject filenames that would silently truncate the path buffer. */
+  const char *dir =
+      (loc == STORAGE_FLASH) ? STORAGE_FLASH_BASE_PATH : cfg->sd_dir;
+  if (strlen(dir) + 1 + strlen(filename) + 1 > ITEM_PATH_BUF_SIZE)
+    return ESP_ERR_INVALID_ARG;
+
   esp_err_t ret = item_init_location(cfg, loc);
   if (ret != ESP_OK)
     return ret;
 
-  char path[96];
+  char path[ITEM_PATH_BUF_SIZE];
   item_build_path(cfg, loc, filename, path, sizeof(path));
 
   if (loc == STORAGE_FLASH)
@@ -460,7 +479,7 @@ static bool item_exists(const storage_item_config_t *cfg,
   char filename[48];
   item_build_filename(cfg, loc, sanitized, ext, filename, sizeof(filename));
 
-  char path[96];
+  char path[ITEM_PATH_BUF_SIZE];
   item_build_path(cfg, loc, filename, path, sizeof(path));
 
   if (loc == STORAGE_FLASH) {
@@ -549,6 +568,50 @@ bool storage_descriptor_exists(storage_location_t loc, const char *id,
   const char *ext =
       encrypted ? STORAGE_DESCRIPTOR_EXT_KEF : STORAGE_DESCRIPTOR_EXT_TXT;
   return item_exists(&descriptor_config, loc, id, ext);
+}
+
+/* ========== PSBT public API (SD-only) ========== */
+
+esp_err_t storage_save_psbt(const char *id, const uint8_t *data, size_t len) {
+  return item_save(&psbt_config, STORAGE_SD, id, data, len, STORAGE_PSBT_EXT,
+                   false /* raw binary, no base64 */);
+}
+
+esp_err_t storage_load_psbt(const char *filename, uint8_t **data_out,
+                            size_t *len_out) {
+  esp_err_t ret = item_load_file(&psbt_config, STORAGE_SD, filename, data_out,
+                                 len_out, false /* raw binary */);
+  if (ret != ESP_OK)
+    return ret;
+
+  /* Reject suspiciously large files that cannot be a valid PSBT. */
+  if (*len_out > STORAGE_MAX_PSBT_SIZE) {
+    free(*data_out);
+    *data_out = NULL;
+    *len_out = 0;
+    return ESP_ERR_INVALID_SIZE;
+  }
+
+  return ESP_OK;
+}
+
+esp_err_t storage_list_psbts(storage_location_t loc, char ***filenames_out,
+                             int *count_out) {
+  if (loc != STORAGE_SD) {
+    if (filenames_out)
+      *filenames_out = NULL;
+    if (count_out)
+      *count_out = 0;
+    return ESP_ERR_INVALID_ARG;
+  }
+  const char *exts[] = {STORAGE_PSBT_EXT};
+  return item_list(&psbt_config, STORAGE_SD, exts, 1, filenames_out, count_out);
+}
+
+esp_err_t storage_delete_psbt(storage_location_t loc, const char *filename) {
+  if (loc != STORAGE_SD)
+    return ESP_ERR_INVALID_ARG;
+  return item_delete(&psbt_config, STORAGE_SD, filename);
 }
 
 /* ========== Shared utilities ========== */

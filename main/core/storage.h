@@ -169,4 +169,51 @@ esp_err_t storage_delete_descriptor(storage_location_t loc,
 bool storage_descriptor_exists(storage_location_t loc, const char *id,
                                bool encrypted);
 
+/* ---------- PSBT storage (SD card only) ---------- */
+
+#define STORAGE_SD_PSBTS_DIR "/sdcard/kern/psbts"
+#define STORAGE_PSBT_EXT ".psbt"
+
+/** Maximum raw PSBT file size accepted when loading from SD card (512 KB). */
+#define STORAGE_MAX_PSBT_SIZE (512U * 1024U)
+
+/**
+ * Save a raw binary PSBT to the SD card.
+ *
+ * @param id    Human-readable ID used to derive the filename
+ * @param data  Raw PSBT bytes
+ * @param len   Length of data
+ */
+esp_err_t storage_save_psbt(const char *id, const uint8_t *data, size_t len);
+
+/**
+ * Load a raw binary PSBT from the SD card.
+ *
+ * @param filename  Filename (e.g. "signed_1234.psbt")
+ * @param data_out  Receives heap-allocated raw PSBT bytes (caller frees)
+ * @param len_out   Receives length
+ */
+esp_err_t storage_load_psbt(const char *filename, uint8_t **data_out,
+                            size_t *len_out);
+
+/**
+ * List stored PSBT files on the SD card.
+ *
+ * @param loc            Must be STORAGE_SD; returns ESP_ERR_INVALID_ARG
+ * otherwise
+ * @param filenames_out  Receives array of filename strings (caller frees
+ *                       with storage_free_file_list)
+ * @param count_out      Receives count
+ */
+esp_err_t storage_list_psbts(storage_location_t loc, char ***filenames_out,
+                             int *count_out);
+
+/**
+ * Delete a stored PSBT file from the SD card.
+ *
+ * @param loc       Must be STORAGE_SD; returns ESP_ERR_INVALID_ARG otherwise
+ * @param filename  Filename to delete
+ */
+esp_err_t storage_delete_psbt(storage_location_t loc, const char *filename);
+
 #endif /* STORAGE_H */

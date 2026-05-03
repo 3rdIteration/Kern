@@ -13,6 +13,7 @@
 #include "../settings/wallet_settings.h"
 #include "addresses.h"
 #include "backup/backup_menu.h"
+#include "load_psbt_storage.h"
 #include "public_key.h"
 #include <bsp/pmic.h>
 #include <esp_log.h>
@@ -26,11 +27,14 @@ static void menu_backup_cb(void);
 static void menu_xpub_cb(void);
 static void menu_addresses_cb(void);
 static void menu_scan_cb(void);
+static void menu_load_psbt_cb(void);
 static void return_from_backup_menu_cb(void);
 static void return_from_public_key_cb(void);
 static void return_from_addresses_cb(void);
 static void return_from_scan_cb(void);
 static void return_from_wallet_settings_cb(void);
+static void return_from_load_psbt_browser_cb(void);
+static void return_from_load_psbt_scan_cb(void);
 
 static void menu_backup_cb(void) {
   home_page_hide();
@@ -127,6 +131,30 @@ static void return_from_scan_cb(void) {
   home_page_show();
 }
 
+static void return_from_load_psbt_browser_cb(void) {
+  load_psbt_storage_page_destroy();
+  home_page_show();
+}
+
+static void return_from_load_psbt_scan_cb(void) {
+  scan_page_destroy();
+  load_psbt_storage_page_destroy();
+  if (key_snapshot_changed() || wallet_settings_were_applied()) {
+    home_page_destroy();
+    home_page_create(lv_screen_active());
+  }
+  home_page_show();
+}
+
+static void menu_load_psbt_cb(void) {
+  save_key_snapshot();
+  home_page_hide();
+  load_psbt_storage_page_create(lv_screen_active(),
+                                return_from_load_psbt_browser_cb,
+                                return_from_load_psbt_scan_cb);
+  load_psbt_storage_page_show();
+}
+
 static void settings_button_cb(lv_event_t *e) {
   (void)e;
   home_page_hide();
@@ -163,6 +191,7 @@ void home_page_create(lv_obj_t *parent) {
     ui_menu_set_entry_disabled_callback(main_menu, 0,
                                         camera_show_no_camera_dialog);
   }
+  ui_menu_add_entry(main_menu, "Load PSBT", menu_load_psbt_cb);
   ui_menu_add_entry(main_menu, "Extended Public Key", menu_xpub_cb);
   ui_menu_add_entry(main_menu, "Addresses", menu_addresses_cb);
   ui_menu_add_entry(main_menu, "Back Up", menu_backup_cb);

@@ -254,6 +254,7 @@ set(APP_PAGE_SOURCES
     # Home
     ${APP_PAGES_DIR}/home/home.c
     ${APP_PAGES_DIR}/home/addresses.c
+    ${APP_PAGES_DIR}/home/load_psbt_storage.c
     ${APP_PAGES_DIR}/home/public_key.c
     ${APP_PAGES_DIR}/home/backup/backup_menu.c
     ${APP_PAGES_DIR}/home/backup/mnemonic_qr.c
