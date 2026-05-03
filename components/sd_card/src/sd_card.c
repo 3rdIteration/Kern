@@ -9,16 +9,12 @@
 #include "esp_ldo_regulator.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "sdmmc_cmd.h"
 
 static const char *TAG = "sd_card";
 
 static sdmmc_card_t *s_card = NULL;
 static bool s_mounted = false;
-static sd_card_event_cb_t s_event_cb = NULL;
-static TaskHandle_t s_poll_task = NULL;
 
 static esp_err_t sd_card_enable_power(void) {
   static esp_ldo_channel_handle_t s_ldo_chan = NULL;
@@ -246,48 +242,4 @@ void sd_card_free_file_list(char **files, int count) {
   for (int i = 0; i < count; i++)
     free(files[i]);
   free(files);
-}
-
-void sd_card_set_event_cb(sd_card_event_cb_t cb) { s_event_cb = cb; }
-
-static void sd_poll_task(void *arg) {
-  (void)arg;
-  bool last_init_ok = false; /* suppress repeated mount-fail log spam */
-  while (1) {
-    if (s_mounted) {
-      /* Send CMD13 to check whether the card is still responding. */
-      if (sdmmc_get_status(s_card) != ESP_OK) {
-        ESP_LOGI(TAG, "SD card removed");
-        /* Card is gone; unmount to release VFS and FATFS state.
-           Ignore the return value — the card may no longer respond. */
-        esp_vfs_fat_sdcard_unmount(SD_CARD_MOUNT_POINT, s_card);
-        s_card = NULL;
-        s_mounted = false;
-        last_init_ok = false;
-        if (s_event_cb)
-          s_event_cb(SD_CARD_EVT_REMOVED);
-      }
-    } else {
-      /* No card mounted; attempt to mount one. */
-      bool ok = (sd_card_init() == ESP_OK);
-      if (ok && !last_init_ok) {
-        ESP_LOGI(TAG, "SD card inserted");
-        if (s_event_cb)
-          s_event_cb(SD_CARD_EVT_INSERTED);
-      }
-      last_init_ok = ok;
-    }
-    vTaskDelay(pdMS_TO_TICKS(1000));
-  }
-}
-
-void sd_card_start_hotswap_polling(void) {
-  if (s_poll_task)
-    return;
-  BaseType_t ret =
-      xTaskCreate(sd_poll_task, "sd_poll", 4096, NULL, 2, &s_poll_task);
-  if (ret != pdPASS) {
-    ESP_LOGE(TAG, "Failed to create SD polling task");
-    s_poll_task = NULL;
-  }
 }

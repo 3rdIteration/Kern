@@ -262,19 +262,26 @@ static esp_err_t item_save(const storage_item_config_t *cfg,
   if (loc == STORAGE_FLASH)
     return write_flash_file(path, data, len);
 
+  esp_err_t write_ret;
   if (base64_on_sd) {
     unsigned char *b64 = NULL;
     size_t b64_len = 0;
     ret = base64_encode_alloc(data, len, &b64, &b64_len);
-    if (ret != ESP_OK)
+    if (ret != ESP_OK) {
+      /* sd_card_deinit() is idempotent; safe even if mount was never reached */
+      sd_card_deinit();
       return ret;
+    }
 
-    ret = sd_card_write_file(path, b64, b64_len);
+    write_ret = sd_card_write_file(path, b64, b64_len);
     free(b64);
-    return ret;
+  } else {
+    write_ret = sd_card_write_file(path, data, len);
   }
 
-  return sd_card_write_file(path, data, len);
+  /* Unmount the card after every write so the user can safely remove it. */
+  sd_card_deinit();
+  return write_ret;
 }
 
 static esp_err_t item_load_file(const storage_item_config_t *cfg,

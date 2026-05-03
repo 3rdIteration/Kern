@@ -26,9 +26,9 @@ Kern supports three Waveshare ESP32-P4 boards and one Elecrow CrowPanel board:
 | [ESP32-P4-WiFi6-Touch-LCD-4B](https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-4b.htm) (`wave_4b`) | 720x720 MIPI DSI | GT911 | OV5647 + DW9714 autofocus | Not configured |
 | [ESP32-P4-WiFi6-Touch-LCD-3.5](https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-3.5.htm) (`wave_35`) | 320x480 SPI | FT5x06 | OV5647 (no autofocus) | Not configured |
 | [ESP32-P4-WiFi6-Touch-LCD-5](https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-5.htm) (`wave_5`) | 720x1280 MIPI DSI | GT911 | OV5647 (no autofocus) | Not configured |
-| [CrowPanel Advanced 10.1" ESP32-P4](https://github.com/3rdIteration/CrowPanel-10.1-ESP32-P4) (`crowpanel_101`) | 1024x600 MIPI DSI | GT911 | OV5647 via camera header (no autofocus) | Yes (read/write, hot swap)[^sd] |
+| [CrowPanel Advanced 10.1" ESP32-P4](https://github.com/3rdIteration/CrowPanel-10.1-ESP32-P4) (`crowpanel_101`) | 1024x600 MIPI DSI | GT911 | OV5647 via camera header (no autofocus) | Yes (read/write)[^sd] |
 
-[^sd]: Hot swap is implemented via 1 s polling (no card-detect pin). Remove or insert a card while idle; the change is detected within one second. Do not swap cards during an active file operation.
+[^sd]: No card-detect pin is wired.  The card is mounted on demand when a load or save workflow begins, and unmounted automatically after every write so the card can be safely removed.  To swap cards, simply remove and re-insert before starting the next workflow.
 
 ESP32-P4 does not contain radio (WiFi, BLE), but these boards have a radio in a secondary chip (ESP32-C6 mini). Later the project will migrate to use radio-less, simpler and cheaper boards with ESP32-P4 only.
 
