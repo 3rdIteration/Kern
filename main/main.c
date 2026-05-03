@@ -19,6 +19,7 @@
 #include <freertos/task.h>
 #include <lvgl.h>
 #include <nvs_flash.h>
+#include <sd_card.h>
 #include <wally_core.h>
 
 static const char *TAG = "KERN_MAIN";
@@ -122,6 +123,9 @@ void app_main(void) {
 
   // Detect camera presence before any UI pages are created
   camera_detect();
+
+  // Start background SD card hot-swap polling (once per second)
+  sd_card_start_hotswap_polling();
 
   // Lock display again for modifications
   bsp_display_lock(0);
