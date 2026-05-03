@@ -21,12 +21,14 @@ Kern is an experimental project that explores the capabilities of the ESP32-P4 a
 
 Kern supports three Waveshare ESP32-P4 boards and one Elecrow CrowPanel board:
 
-| Board | Display | Touch | Camera |
-|-------|---------|-------|--------|
-| [ESP32-P4-WiFi6-Touch-LCD-4B](https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-4b.htm) (`wave_4b`) | 720x720 MIPI DSI | GT911 | OV5647 + DW9714 autofocus |
-| [ESP32-P4-WiFi6-Touch-LCD-3.5](https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-3.5.htm) (`wave_35`) | 320x480 SPI | FT5x06 | OV5647 (no autofocus) |
-| [ESP32-P4-WiFi6-Touch-LCD-5](https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-5.htm) (`wave_5`) | 720x1280 MIPI DSI | GT911 | OV5647 (no autofocus) |
-| [CrowPanel Advanced 10.1" ESP32-P4](https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen) (`crowpanel_101`) | 1024x600 MIPI DSI | GT911 | OV5647 via camera header (no autofocus) |
+| Board | Display | Touch | Camera | microSD |
+|-------|---------|-------|--------|---------|
+| [ESP32-P4-WiFi6-Touch-LCD-4B](https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-4b.htm) (`wave_4b`) | 720x720 MIPI DSI | GT911 | OV5647 + DW9714 autofocus | Not configured |
+| [ESP32-P4-WiFi6-Touch-LCD-3.5](https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-3.5.htm) (`wave_35`) | 320x480 SPI | FT5x06 | OV5647 (no autofocus) | Not configured |
+| [ESP32-P4-WiFi6-Touch-LCD-5](https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-5.htm) (`wave_5`) | 720x1280 MIPI DSI | GT911 | OV5647 (no autofocus) | Not configured |
+| [CrowPanel Advanced 10.1" ESP32-P4](https://github.com/3rdIteration/CrowPanel-10.1-ESP32-P4) (`crowpanel_101`) | 1024x600 MIPI DSI | GT911 | OV5647 via camera header (no autofocus) | Yes (read/write)[^sd] |
+
+[^sd]: Hot swapping is not supported on any board — no card-detect (CD) pin is wired. Power-cycle the device to safely swap cards.
 
 ESP32-P4 does not contain radio (WiFi, BLE), but these boards have a radio in a secondary chip (ESP32-C6 mini). Later the project will migrate to use radio-less, simpler and cheaper boards with ESP32-P4 only.
 
