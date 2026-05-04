@@ -12,7 +12,6 @@
 #include "esp_lcd_touch_gt911.h"
 #include "esp_log.h"
 #include "sdkconfig.h"
-#include <string.h>
 
 static const char *TAG = "wave_p4_pico";
 
@@ -205,15 +204,13 @@ esp_err_t bsp_touch_new(const bsp_touch_config_t *config,
   esp_lcd_panel_io_i2c_config_t tp_io_config;
   if (bsp_i2c_device_probe(ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS) == ESP_OK) {
     ESP_LOGI(TAG, "GT911 found at 0x%02X", ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS);
-    esp_lcd_panel_io_i2c_config_t cfg = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
-    memcpy(&tp_io_config, &cfg, sizeof(cfg));
+    tp_io_config = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
   } else if (bsp_i2c_device_probe(
                  ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS_BACKUP) == ESP_OK) {
     ESP_LOGI(TAG, "GT911 found at 0x%02X",
              ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS_BACKUP);
-    esp_lcd_panel_io_i2c_config_t cfg = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
-    cfg.dev_addr = ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS_BACKUP;
-    memcpy(&tp_io_config, &cfg, sizeof(cfg));
+    tp_io_config = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
+    tp_io_config.dev_addr = ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS_BACKUP;
   } else {
     ESP_LOGE(TAG, "GT911 not found at either I2C address");
     return ESP_ERR_NOT_FOUND;
