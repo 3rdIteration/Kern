@@ -17,6 +17,9 @@ menu "Kern Configuration"
 
         config KERN_BOARD_CROWPANEL_101
             bool "CrowPanel Advanced 10.1\" ESP32-P4 (1024x600 MIPI DSI)"
+
+        config KERN_BOARD_WAVE_P4_PICO
+            bool "Waveshare ESP32-P4-Pico + ST7789 320x240 SPI + GT911 touch"
     endchoice
 
 endmenu

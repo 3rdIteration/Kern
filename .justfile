@@ -29,7 +29,7 @@ test:
     ./scripts/test.sh
 
 clean:
-    rm -fRd build build_wave_4b build_wave_35 build_wave_5 build_crowpanel_101
+    rm -fRd build build_wave_4b build_wave_35 build_wave_5 build_crowpanel_101 build_wave_p4_pico
     rm -f sdkconfig
     rm -fRd compile_commands.json
     rm -fRd .cache/
@@ -38,14 +38,14 @@ clean:
     make -C main/core/test clean
 
 # Simulator board resolution mapping
-# wave_4b: 720x720, wave_35: 320x480, wave_5: 720x1280, crowpanel_101: 1024x600
+# wave_4b: 720x720, wave_35: 320x480, wave_5: 720x1280, crowpanel_101: 1024x600, wave_p4_pico: 320x240
 _sim_h_res board:
     #!/usr/bin/env sh
-    case "{{board}}" in wave_35) echo 320;; wave_5) echo 720;; crowpanel_101) echo 1024;; *) echo 720;; esac
+    case "{{board}}" in wave_35) echo 320;; wave_5) echo 720;; crowpanel_101) echo 1024;; wave_p4_pico) echo 320;; *) echo 720;; esac
 
 _sim_v_res board:
     #!/usr/bin/env sh
-    case "{{board}}" in wave_35) echo 480;; wave_5) echo 1280;; crowpanel_101) echo 600;; *) echo 720;; esac
+    case "{{board}}" in wave_35) echo 480;; wave_5) echo 1280;; crowpanel_101) echo 600;; wave_p4_pico) echo 240;; *) echo 720;; esac
 
 # Build the desktop simulator
 sim-build board="wave_4b":

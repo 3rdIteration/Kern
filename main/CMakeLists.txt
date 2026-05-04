@@ -9,13 +9,15 @@ elseif(CONFIG_KERN_BOARD_WAVE_5)
     set(TOUCH_DRIVER esp_lcd_touch_gt911)
 elseif(CONFIG_KERN_BOARD_CROWPANEL_101)
     set(TOUCH_DRIVER esp_lcd_touch_gt911)
+elseif(CONFIG_KERN_BOARD_WAVE_P4_PICO)
+    set(TOUCH_DRIVER esp_lcd_touch_gt911)
 endif()
 
 idf_component_register(
     SRCS ${SOURCES}
     INCLUDE_DIRS .
     PRIV_REQUIRES lvgl ${TOUCH_DRIVER} k_quirc esp_timer wave_4b wave_35 wave_5
-                  crowpanel_101 libwally-core cUR sd_card bbqr spiffs nvs_flash efuse
+                  crowpanel_101 wave_p4_pico libwally-core cUR sd_card bbqr spiffs nvs_flash efuse
                   esp_hw_support esp_app_format mbedtls_compat esp_driver_ppa
 )
 
