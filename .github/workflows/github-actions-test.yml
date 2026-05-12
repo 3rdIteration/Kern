@@ -53,10 +53,20 @@ jobs:
         cp "$BUILD"/bootloader/bootloader.bin "$STAGE"/
         cp "$BUILD"/partition_table/partition-table.bin "$STAGE"/
         cp "$BUILD"/flasher_args.json "$STAGE"/
-        cp "$BUILD"/flash_args "$STAGE"/ 2>/dev/null || true
-        cp "$BUILD"/*.bin "$STAGE"/ 2>/dev/null || true
-        cp "$BUILD"/*.elf "$STAGE"/ 2>/dev/null || true
-        cp "$BUILD"/*.map "$STAGE"/ 2>/dev/null || true
+        if [ -f "$BUILD"/flash_args ]; then
+          cp "$BUILD"/flash_args "$STAGE"/
+        else
+          echo "Optional file missing: $BUILD/flash_args"
+        fi
+        shopt -s nullglob
+        for ext in bin elf map; do
+          files=("$BUILD"/*."$ext")
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "Optional files missing: $BUILD/*.$ext"
+            continue
+          fi
+          cp "${files[@]}" "$STAGE"/
+        done
     - name: Upload firmware artifact (${{ matrix.board }})
       uses: actions/upload-artifact@v4
       with:
