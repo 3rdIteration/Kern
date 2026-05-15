@@ -13,6 +13,7 @@
 #include "core/settings.h"
 #include "core/pin.h"
 #include "utils/session.h"
+#include "core/camera.h"
 #include "pages/pin/pin_page.h"
 #include "pages/login/login.h"
 #include "ui/nav.h"
@@ -256,6 +257,9 @@ int main(int argc, char *argv[]) {
 
     /* Register session expiry callback */
     session_set_expired_callback(session_expired_handler);
+
+    /* Detect camera presence before any UI pages are created */
+    camera_detect();
 
     /* -----------------------------------------------------------------------
      * Schedule transition to PIN gate after 3-second splash

@@ -1,6 +1,7 @@
 // Addresses Page - Displays receive and change addresses
 
 #include "addresses.h"
+#include "../../core/camera.h"
 #include "../../core/registry.h"
 #include "../../core/ss_whitelist.h"
 #include "../../core/storage.h"
@@ -361,6 +362,10 @@ static void return_from_scan_cb(void) {
 
 static void scan_button_cb(lv_event_t *e) {
   (void)e;
+  if (!camera_is_available()) {
+    camera_show_no_camera_dialog();
+    return;
+  }
   addresses_page_hide();
   qr_scanner_page_create(NULL, return_from_scan_cb);
   qr_scanner_page_show();
@@ -421,6 +426,9 @@ void addresses_page_create(lv_obj_t *parent, void (*return_cb)(void)) {
   lv_obj_set_style_text_font(scan_label, theme_font_medium(), 0);
   lv_obj_center(scan_label);
   lv_obj_add_event_cb(scan_button, scan_button_cb, LV_EVENT_CLICKED, NULL);
+  if (!camera_is_available()) {
+    lv_obj_set_style_text_color(scan_label, disabled_color(), 0);
+  }
 
   // Address list container
   address_list_container = lv_obj_create(addresses_screen);

@@ -14,8 +14,13 @@ static void menu_button_event_cb(lv_event_t *e) {
   for (int i = 0; i < menu->config.entry_count; i++) {
     if (menu->buttons[i] == btn) {
       menu->config.selected_index = i;
-      if (menu->config.entries[i].enabled && menu->config.entries[i].callback)
-        menu->config.entries[i].callback();
+      if (menu->config.entries[i].enabled) {
+        if (menu->config.entries[i].callback)
+          menu->config.entries[i].callback();
+      } else {
+        if (menu->config.entries[i].disabled_callback)
+          menu->config.entries[i].disabled_callback();
+      }
       break;
     }
   }
@@ -183,9 +188,10 @@ bool ui_menu_set_entry_enabled(ui_menu_t *menu, int index, bool enabled) {
   menu->config.entries[index].enabled = enabled;
   if (enabled) {
     lv_obj_clear_state(menu->buttons[index], LV_STATE_DISABLED);
-  } else {
-    lv_obj_add_state(menu->buttons[index], LV_STATE_DISABLED);
   }
+  /* Don't call lv_obj_add_state(LV_STATE_DISABLED) when disabling: that flag
+   * blocks all LVGL input events, which would prevent our disabled_callback
+   * from firing.  Visual feedback is provided by the label colour alone. */
 
   /* Update label color to reflect enabled/disabled state */
   lv_obj_t *label = lv_obj_get_child(menu->buttons[index], 0);
@@ -193,6 +199,14 @@ bool ui_menu_set_entry_enabled(ui_menu_t *menu, int index, bool enabled) {
     lv_obj_set_style_text_color(label,
                                 enabled ? main_color() : disabled_color(), 0);
   }
+  return true;
+}
+
+bool ui_menu_set_entry_disabled_callback(ui_menu_t *menu, int index,
+                                         ui_menu_callback_t callback) {
+  if (!menu || index < 0 || index >= menu->config.entry_count)
+    return false;
+  menu->config.entries[index].disabled_callback = callback;
   return true;
 }
 

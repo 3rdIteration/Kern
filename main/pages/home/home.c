@@ -1,4 +1,5 @@
 #include "home.h"
+#include "../../core/camera.h"
 #include "../../core/key.h"
 #include "../../core/wallet.h"
 #include "../../ui/assets/icons_24.h"
@@ -144,6 +145,11 @@ void home_page_create(lv_obj_t *parent) {
   ui_battery_create(header);
 
   ui_menu_add_entry(main_menu, ICON_QR_CODE "  Scan", menu_scan_cb);
+  if (!camera_is_available()) {
+    ui_menu_set_entry_enabled(main_menu, 0, false);
+    ui_menu_set_entry_disabled_callback(main_menu, 0,
+                                        camera_show_no_camera_dialog);
+  }
   ui_menu_add_entry(main_menu, "Extended Public Key", menu_xpub_cb);
   ui_menu_add_entry(main_menu, "Addresses", menu_addresses_cb);
   ui_menu_add_entry(main_menu, "Back Up", menu_backup_cb);

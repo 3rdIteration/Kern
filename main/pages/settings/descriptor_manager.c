@@ -1,6 +1,7 @@
 // Descriptor Manager — menu-based hub for load/save/export/delete
 
 #include "descriptor_manager.h"
+#include "../../core/camera.h"
 #include "../../core/descriptor_checksum.h"
 #include "../../core/registry.h"
 #include "../../core/storage.h"
@@ -312,6 +313,10 @@ static void return_from_scanner_cb(void) {
 }
 
 static void load_from_qr_cb(void) {
+  if (!camera_is_available()) {
+    camera_show_no_camera_dialog();
+    return;
+  }
   descriptor_loader_destroy_source_menu();
   descriptor_manager_page_hide();
   qr_scanner_page_create(NULL, return_from_scanner_cb);
