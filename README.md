@@ -152,7 +152,7 @@ The flasher offers two modes:
 
 Every pull request and push to `master` produces a firmware artifact for each supported board via the **GitHub Actions test** workflow. These builds are useful for testing unreleased changes without setting up a local toolchain.
 
-> **Warning:** CI builds are unvetted development snapshots. Do **not** use them as a signer for real funds.
+> **Warning:** Kern is in an initial development stage, CI builds are unvetted development snapshots, and secure boot is not enabled. Do **not** use flashed firmware to manage real savings.
 
 ### Requirements
 
