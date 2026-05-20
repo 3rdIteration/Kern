@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.0.8] - 2026-05-XX
+
+### Added
+- Support for CrowPanel 10.1 (ESP32-P4 board, EK79007 panel, GT911 touch)
+- Web flasher deployment with CrowPanel 10.1 included
+- Simulator now uses production storage with a file-backed SPIFFS shim
+- Optional 4-bit custom GPIO routing for SD card (D1/D2/D3 Kconfig); defaults preserve the SDMMC IOMUX fast path
+
+
+### Fixed
+- wave_4b: use internal LVGL draw buffer to avoid DMA2D copy window overlapping LCD draws
+- Addresses page: align cropped address rows
+- Scan: preserve address tip highlighting across wraps
+- Scan: show network-mismatch error for cross-network addresses
+- Scan: suppress QR format error on cancel
+- Camera: show error and bail when camera unavailable
+- Public key page layout
+- Mnemonic QR layout on portrait devices
+
 ## [0.0.7] - 2026-05-15
 
 ### Added

@@ -94,7 +94,7 @@ void esp_fill_random(void *buf, size_t len) {
 
 void esp_restart(void) {
     fprintf(stderr, "[SIM] esp_restart() called — exiting\n");
-    exit(1);
+    exit(0);
 }
 
 void esp_chip_info(esp_chip_info_t *out_info) {

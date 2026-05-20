@@ -44,6 +44,7 @@
   - ✅ Encrypting/Decrypting
   - ❌ Persistent registration with encrypted descriptor backups, using the public keys inside the descriptor as keys, following the Bitcoin Encrypted Backup proposal in bitcoin/bips#1951
 - Script type
+  - ✅ Legacy
   - ✅ Native Segwit (P2WPKH, BIP84)
   - ✅ Nested Segwit (P2SH-P2WPKH, BIP49)
   - ✅ Taproot (P2TR, BIP86)
