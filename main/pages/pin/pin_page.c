@@ -920,6 +920,9 @@ static void build_delay_state(void) {
   create_back_or_power_button();
   title_label = theme_create_page_title(page_screen, "Wrong PIN");
   lv_obj_set_style_text_color(title_label, error_color(), 0);
+  lv_obj_set_style_text_font(title_label, theme_font_medium(), 0);
+  lv_obj_update_layout(title_label);
+  lv_obj_set_y(title_label, lv_obj_get_y(title_label) + 12);
 
   create_content_area();
 
@@ -945,7 +948,7 @@ static void build_delay_state(void) {
   char buf[16];
   format_delay(buf, sizeof(buf), delay_remaining_sec);
   lv_label_set_text(delay_label, buf);
-  lv_obj_set_style_text_font(delay_label, theme_font_medium(), 0);
+  lv_obj_set_style_text_font(delay_label, theme_font_small(), 0);
   lv_obj_set_style_text_color(delay_label, primary_color(), 0);
   lv_obj_center(delay_label);
 
