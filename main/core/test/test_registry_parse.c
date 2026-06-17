@@ -357,6 +357,92 @@ int main(void) {
   skip_ms:;
   }
 
+  /* --- Group 4b: wsh(miniscript) with multipath /<0;1>/* --- */
+  printf("\n--- Group 4b: wsh(miniscript) multipath ---\n");
+  {
+    registry_clear();
+    bool ok = registry_add_from_string(
+        "ms_multi",
+        "wsh(or_d(pk([00000000/48'/0'/0'/2']" XPUB_84 "/<0;1>/*),"
+        "and_v(v:pkh([11111111/48'/0'/0'/2']" XPUB_86
+        "/<0;1>/*),older(65535))))#lq537sdz",
+        STORAGE_FLASH, false);
+
+    TEST("ms multipath: add returns true");
+    if (ok) {
+      PASS();
+    } else {
+      FAIL("returned false");
+    }
+
+    TEST("ms multipath: count == 1");
+    if (registry_count() == 1) {
+      PASS();
+    } else {
+      FAIL("wrong count");
+    }
+
+    const registry_entry_t *e = registry_find_by_id("ms_multi");
+    TEST("ms multipath: entry found");
+    if (e) {
+      PASS();
+    } else {
+      FAIL("entry not found");
+      goto skip_ms_multi;
+    }
+
+    TEST("ms multipath: my_key_index == 0");
+    if (e->my_key_index == 0) {
+      PASS();
+    } else {
+      FAIL("wrong key index");
+    }
+
+    TEST("ms multipath: num_paths == 2");
+    if (e->num_paths == 2) {
+      PASS();
+    } else {
+      FAIL("wrong num_paths");
+    }
+
+    TEST("ms multipath: origin depth == 4");
+    if (e->origin_path_len == 4) {
+      PASS();
+    } else {
+      FAIL("wrong depth");
+    }
+
+    TEST("ms multipath: origin path[0] == 48'");
+    if (e->origin_path[0] == 0x80000030u) {
+      PASS();
+    } else {
+      FAIL("wrong path[0]");
+    }
+
+    TEST("ms multipath: origin path[1] == 0'");
+    if (e->origin_path[1] == 0x80000000u) {
+      PASS();
+    } else {
+      FAIL("wrong path[1]");
+    }
+
+    TEST("ms multipath: origin path[2] == 0'");
+    if (e->origin_path[2] == 0x80000000u) {
+      PASS();
+    } else {
+      FAIL("wrong path[2]");
+    }
+
+    TEST("ms multipath: origin path[3] == 2'");
+    if (e->origin_path[3] == 0x80000002u) {
+      PASS();
+    } else {
+      FAIL("wrong path[3]");
+    }
+
+  skip_ms_multi:;
+  }
+
   /* --- Group 5: negative: fingerprint not found --- */
   printf("\n--- Group 5: negative: fingerprint not found ---\n");
   {

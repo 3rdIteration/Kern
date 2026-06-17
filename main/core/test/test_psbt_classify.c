@@ -228,6 +228,20 @@ static const uint8_t REF_MS_WITNESS[] = {
     0xd5, 0x45, 0x7e, 0x6c, 0x23, 0x7c, 0xab, 0xca, 0xd1, 0x4d, 0x4f, 0x39,
     0x88, 0xad, 0x03, 0xff, 0xff, 0x00, 0xb2, 0x68};
 
+/* wsh(or_d(pk(key0/<0;1>/*),and_v(v:pkh(key1/<0;1>/*),older(65535))))
+ * change path (multi_index=1, child_num=0): P2WSH SPK + miniscript witness */
+static const uint8_t REF_MS_MULTI_CHG_SPK[] = {
+    0x00, 0x20, 0x26, 0x58, 0x04, 0x06, 0xa3, 0x22, 0x10, 0x5e, 0xf0, 0x88,
+    0x78, 0xfc, 0x56, 0xaf, 0xe8, 0xb7, 0x85, 0xa4, 0xcc, 0x7b, 0xd6, 0xcd,
+    0xfe, 0xfa, 0xa1, 0xe5, 0xd4, 0xd0, 0xe3, 0xb4, 0x6c, 0x80};
+static const uint8_t REF_MS_MULTI_CHG_WITNESS[] = {
+    0x21, 0x03, 0x02, 0x53, 0x24, 0x88, 0x8e, 0x42, 0x9a, 0xb8, 0xe3, 0xdb,
+    0xaf, 0x1f, 0x78, 0x02, 0x64, 0x8b, 0x9c, 0xd0, 0x1e, 0x9b, 0x41, 0x84,
+    0x85, 0xc5, 0xfa, 0x4c, 0x1b, 0x9b, 0x57, 0x00, 0xe1, 0xa6, 0xac, 0x73,
+    0x64, 0x76, 0xa9, 0x14, 0xdd, 0x49, 0x4b, 0xa8, 0xf6, 0x22, 0xf9, 0xae,
+    0x25, 0x6d, 0x2d, 0x58, 0xbc, 0x48, 0x21, 0x4a, 0x6d, 0x48, 0x19, 0xf7,
+    0x88, 0xad, 0x03, 0xff, 0xff, 0x00, 0xb2, 0x68};
+
 /* tr([00000000/86'/0'/0']XPUB_86/0/ *) child_num=0: P2TR SPK, no redeem, no
  * witness */
 static const uint8_t REF_TR_SPK[] = {
@@ -1308,6 +1322,15 @@ make_two_input_psbt(const uint8_t *spk1, size_t spk1_len, const uint8_t *pk1,
   "and_v(v:pkh([11111111/48'/0'/0'/2']" XPUB_86 "/0/*),"                       \
   "older(65535))))#xqs0xj7k"
 
+/* wsh(or_d(pk(key0/<0;1>/*),and_v(v:pkh(key1/<0;1>/*),older(65535)))) —
+ * same miniscript policy as MS_REGISTRY_DESC but with multipath /<0;1>/*.
+ * Allows testing PSBT classification for both receive (mp=0) and change
+ * (mp=1) paths without registering two separate descriptors. */
+#define MS_MULTIPATH_DESC                                                      \
+  "wsh(or_d(pk([00000000/48'/0'/0'/2']" XPUB_84 "/<0;1>/*),"                  \
+  "and_v(v:pkh([11111111/48'/0'/0'/2']" XPUB_86 "/<0;1>/*),"                  \
+  "older(65535))))#lq537sdz"
+
 /* Build a PSBT input that matches a registered wsh descriptor with origin
  * 48'/0'/0'/2' at multi_index=0, child_num=0. The returned PSBT has the
  * given spk + witness_script wired in; caller is responsible for any
@@ -1483,6 +1506,72 @@ static void test_psbt_classify_registry_miniscript_tampered(void) {
 
   if (r.ownership != PSBT_OWNERSHIP_EXPECTED_OWNED) {
     FAIL("expected EXPECTED_OWNED on tampered witness");
+    return;
+  }
+  PASS();
+}
+
+/* Positive case for wsh(miniscript) with multipath /<0;1>/* descriptor:
+ * register with num_paths=2, then classify a PSBT with the change keypath
+ * (chain=1, mp=1). registry_match_keypath must not skip the entry when
+ * num_paths==2 and mp==1, and claim_regenerate must use multi_index=1 to
+ * derive the correct change SPK and witness script. */
+static void test_psbt_classify_registry_miniscript_multipath_change(void) {
+  TEST("psbt_classify_input: wsh(miniscript) multipath, change path -> "
+       "OWNED_SAFE");
+
+  registry_clear();
+  if (!registry_add_from_string("t", MS_MULTIPATH_DESC, STORAGE_FLASH,
+                                false)) {
+    FAIL("registry_add_from_string");
+    return;
+  }
+
+  struct ext_key *derived = NULL;
+  if (!key_get_derived_key("m/48'/0'/0'/2'/1/0", &derived)) {
+    FAIL("key derivation m/48'/0'/0'/2'/1/0");
+    registry_clear();
+    return;
+  }
+
+  uint8_t kp_val[] = {
+      0x00, 0x00, 0x00, 0x00, /* fp = 00000000 */
+      0x30, 0x00, 0x00, 0x80, /* 48' */
+      0x00, 0x00, 0x00, 0x80, /* 0'  */
+      0x00, 0x00, 0x00, 0x80, /* 0'  */
+      0x02, 0x00, 0x00, 0x80, /* 2'  */
+      0x01, 0x00, 0x00, 0x00, /* chain 1 (change) */
+      0x00, 0x00, 0x00, 0x00, /* index 0 */
+  };
+
+  struct wally_psbt *psbt = make_test_psbt(
+      REF_MS_MULTI_CHG_SPK, sizeof(REF_MS_MULTI_CHG_SPK), derived->pub_key,
+      sizeof(derived->pub_key), kp_val, sizeof(kp_val));
+  bip32_key_free(derived);
+  if (!psbt) {
+    FAIL("make_test_psbt");
+    registry_clear();
+    return;
+  }
+  if (wally_psbt_set_input_witness_script(
+          psbt, 0, REF_MS_MULTI_CHG_WITNESS,
+          sizeof(REF_MS_MULTI_CHG_WITNESS)) != WALLY_OK) {
+    wally_psbt_free(psbt);
+    FAIL("set_input_witness_script");
+    registry_clear();
+    return;
+  }
+
+  input_ownership_t r = psbt_classify_input(psbt, 0, false);
+  wally_psbt_free(psbt);
+  registry_clear();
+
+  if (r.ownership != PSBT_OWNERSHIP_OWNED_SAFE) {
+    FAIL("expected OWNED_SAFE for change path");
+    return;
+  }
+  if (r.claim.kind != CLAIM_REGISTRY) {
+    FAIL("expected CLAIM_REGISTRY");
     return;
   }
   PASS();
@@ -1811,6 +1900,7 @@ int main(void) {
   test_psbt_classify_registry_wsh_tampered_witness();
   test_psbt_classify_registry_miniscript_owned();
   test_psbt_classify_registry_miniscript_tampered();
+  test_psbt_classify_registry_miniscript_multipath_change();
 
   key_unload();
 
