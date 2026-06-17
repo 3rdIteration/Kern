@@ -67,7 +67,7 @@ static void show_brightness_page(void) {
   lv_obj_set_height(brightness_slider, 10);
   lv_obj_align(brightness_slider, LV_ALIGN_CENTER, 0, 20);
 
-  // Style: orange knob and indicator, dark track
+  // Style: light-blue knob and indicator, dark track
   lv_obj_set_style_bg_color(brightness_slider, highlight_color(),
                             LV_PART_INDICATOR);
   lv_obj_set_style_bg_color(brightness_slider, highlight_color(), LV_PART_KNOB);

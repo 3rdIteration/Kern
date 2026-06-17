@@ -13,7 +13,7 @@
 #define COLOR_SURFACE lv_color_hex(0x333333) // Neutral control fill / disabled
 #define COLOR_WHITE lv_color_hex(0xFFFFFF)   // White text/borders
 #define COLOR_GRAY lv_color_hex(0x888888)    // Gray secondary text
-#define COLOR_ORANGE lv_color_hex(0xff6600)  // Orange accent
+#define COLOR_LIGHT_BLUE lv_color_hex(0x6bb5ff)  // Light blue accent
 #define COLOR_RED lv_color_hex(0xFF0000)     // Error / discouraged / bad
 #define COLOR_GREEN lv_color_hex(0x00FF00)   // Encouraged / good
 #define COLOR_CYAN lv_color_hex(0x00FFFF)    // Cyan accent

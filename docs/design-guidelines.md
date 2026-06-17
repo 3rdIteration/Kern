@@ -14,7 +14,7 @@ Colors live in `main/ui/theme.c` and are reached through accessor functions in `
 | `panel_color()`     | dark gray | Dialog/card backgrounds                  |
 | `primary_color()`   | white   | Primary text, button and dialog body labels |
 | `secondary_color()` | gray    | Page titles, hints, quiet secondary text   |
-| `highlight_color()` | orange  | Titles, button press, dropdown borders     |
+| `highlight_color()` | light blue | Titles, button press, dropdown borders     |
 | `disabled_color()`  | gray    | Disabled text, btnmatrix/dropdown item fills |
 | `accent_color()`    | cyan    | Self-transfer outputs, owned-address emphasis |
 | `error_color()`     | red     | Error text, danger dialog border and icon  |

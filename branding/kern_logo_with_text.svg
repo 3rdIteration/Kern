@@ -45,7 +45,7 @@
        cy="0"
        r="78.5"
        fill="none"
-       stroke="#ff6600"
+       stroke="#6bb5ff"
        stroke-width="2"
        id="circle1" />
     <!-- Inner ring (63%) -->
@@ -54,7 +54,7 @@
        cy="0"
        r="46.5"
        fill="none"
-       stroke="#ff6600"
+       stroke="#6bb5ff"
        stroke-width="4"
        id="circle2" />
     <!-- Core (33%) -->
@@ -62,7 +62,7 @@
        cx="0"
        cy="0"
        r="26.4"
-       fill="#ff6600"
+       fill="#6bb5ff"
        id="circle3" />
   </g>
   <!-- "KERN" text (dark for light backgrounds) -->

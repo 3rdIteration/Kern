@@ -80,8 +80,8 @@ void theme_apply_touch_button(lv_obj_t *btn, bool is_primary) {
   if (!btn)
     return;
 
-  // Shared geometry/text. Default fill: primary = no fill with a thin orange
-  // outline, secondary = solid surface (no border). Both fill orange on press.
+  // Shared geometry/text. Default fill: primary = no fill with a thin light-blue
+  // outline, secondary = solid surface (no border). Both fill light blue on press.
   lv_obj_set_style_text_color(btn, COLOR_WHITE, LV_STATE_DEFAULT);
   lv_obj_set_style_radius(btn, 12, LV_STATE_DEFAULT);
   lv_obj_set_style_pad_all(btn, 15, LV_STATE_DEFAULT);
@@ -89,11 +89,11 @@ void theme_apply_touch_button(lv_obj_t *btn, bool is_primary) {
   lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, LV_STATE_DEFAULT);
   lv_obj_set_style_bg_color(btn, is_primary ? COLOR_BG : COLOR_SURFACE,
                             LV_STATE_DEFAULT);
-  lv_obj_set_style_border_color(btn, COLOR_ORANGE, LV_STATE_DEFAULT);
+  lv_obj_set_style_border_color(btn, COLOR_LIGHT_BLUE, LV_STATE_DEFAULT);
   lv_obj_set_style_border_width(btn, is_primary ? 2 : 0, LV_STATE_DEFAULT);
 
-  // Pressed - both tiers fill orange for unambiguous feedback.
-  lv_obj_set_style_bg_color(btn, COLOR_ORANGE, LV_STATE_PRESSED);
+  // Pressed - both tiers fill light blue for unambiguous feedback.
+  lv_obj_set_style_bg_color(btn, COLOR_LIGHT_BLUE, LV_STATE_PRESSED);
   lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, LV_STATE_PRESSED);
 
   // Disabled - fade out fill and border.
@@ -128,9 +128,9 @@ void theme_apply_btnmatrix(lv_obj_t *btnmatrix) {
   lv_obj_set_style_outline_width(btnmatrix, 0, LV_PART_ITEMS);
 
   // Pressed state
-  lv_obj_set_style_bg_color(btnmatrix, COLOR_ORANGE,
+  lv_obj_set_style_bg_color(btnmatrix, COLOR_LIGHT_BLUE,
                             LV_PART_ITEMS | LV_STATE_PRESSED);
-  lv_obj_set_style_bg_color(btnmatrix, COLOR_ORANGE,
+  lv_obj_set_style_bg_color(btnmatrix, COLOR_LIGHT_BLUE,
                             LV_PART_ITEMS | LV_STATE_CHECKED);
 
   // Disabled state
@@ -289,9 +289,9 @@ static void dropdown_open_cb(lv_event_t *e) {
   if (list) {
     lv_obj_set_style_bg_color(list, COLOR_SURFACE, 0);
     lv_obj_set_style_text_color(list, COLOR_WHITE, 0);
-    lv_obj_set_style_bg_color(list, COLOR_ORANGE,
+    lv_obj_set_style_bg_color(list, COLOR_LIGHT_BLUE,
                               LV_PART_SELECTED | LV_STATE_CHECKED);
-    lv_obj_set_style_bg_color(list, COLOR_ORANGE,
+    lv_obj_set_style_bg_color(list, COLOR_LIGHT_BLUE,
                               LV_PART_SELECTED | LV_STATE_PRESSED);
   }
 }
@@ -306,7 +306,7 @@ lv_obj_t *theme_create_dropdown(lv_obj_t *parent, const char *options) {
   lv_obj_set_style_bg_color(dd, COLOR_SURFACE, 0);
   lv_obj_set_style_text_color(dd, COLOR_WHITE, 0);
   lv_obj_set_style_text_font(dd, theme_font_small(), 0);
-  lv_obj_set_style_border_color(dd, COLOR_ORANGE, 0);
+  lv_obj_set_style_border_color(dd, COLOR_LIGHT_BLUE, 0);
   lv_obj_add_event_cb(dd, dropdown_open_cb, LV_EVENT_READY, NULL);
   return dd;
 }
