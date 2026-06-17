@@ -95,7 +95,7 @@ lv_color_t primary_color(void) { return COLOR_WHITE; }
 
 lv_color_t secondary_color(void) { return COLOR_GRAY; }
 
-lv_color_t highlight_color(void) { return COLOR_ORANGE; }
+lv_color_t highlight_color(void) { return COLOR_LIGHT_BLUE; }
 
 lv_color_t disabled_color(void) { return COLOR_SURFACE; }
 

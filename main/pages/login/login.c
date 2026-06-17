@@ -111,7 +111,7 @@ void login_page_create(lv_obj_t *parent) {
   ui_menu_add_entry(login_menu, "Developer Tools", dev_tools_cb);
 #endif
 
-  // Visual hierarchy: Load / New Mnemonic are the primary actions (orange
+  // Visual hierarchy: Load / New Mnemonic are the primary actions (light-blue
   // outline); everything below is utility, rendered with the secondary style so
   // it recedes against the background.
   for (int i = 2; i < ui_menu_get_entry_count(login_menu); i++)
