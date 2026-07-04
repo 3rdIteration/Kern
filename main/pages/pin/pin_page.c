@@ -375,9 +375,42 @@ static void create_back_or_power_button(void) {
     ui_create_power_button(page_screen, power_btn_cb);
 }
 
+// Steps of the PIN-construction wizard (choose, confirm, split). Verifying
+// the current PIN (change mode) and showing anti-phishing words (deferred
+// eFuse epilogue) are uncounted bookends: STATE_SETUP_SHOW_WORDS only runs
+// when eFuse provisioning is accepted and succeeds, so it isn't a guaranteed
+// step. STATE_SETUP_EFUSE is a dialog overlay, not a screen. Adding a setup
+// screen means adding an enum member here and re-pointing SETUP_STEP_COUNT
+// at the new last step.
+enum {
+  SETUP_STEP_FULL_PIN = 1,
+  SETUP_STEP_CONFIRM_PIN,
+  SETUP_STEP_SPLIT,
+  SETUP_STEP_COUNT = SETUP_STEP_SPLIT,
+};
+
+static int32_t setup_step_for_state(pin_flow_state_t state) {
+  switch (state) {
+  case STATE_SETUP_FULL_PIN:
+    return SETUP_STEP_FULL_PIN;
+  case STATE_SETUP_CONFIRM_PIN:
+    return SETUP_STEP_CONFIRM_PIN;
+  case STATE_SETUP_SPLIT:
+    return SETUP_STEP_SPLIT;
+  default:
+    return 0;
+  }
+}
+
 static void build_chrome(const char *title_text) {
   create_back_or_power_button();
   title_label = theme_create_page_title(page_screen, title_text);
+
+  // Unlock, delay, and wipe states all map to 0; only setup screens get a
+  // bar.
+  int32_t step = setup_step_for_state(current_state);
+  if (step > 0)
+    theme_create_progress_bar(page_screen, title_label, step, SETUP_STEP_COUNT);
 }
 
 static void build_entry_state(const char *title_text) {

@@ -286,6 +286,29 @@ lv_obj_t *theme_create_page_title(lv_obj_t *parent, const char *text) {
   return label;
 }
 
+lv_obj_t *theme_create_progress_bar(lv_obj_t *parent, lv_obj_t *anchor,
+                                    int32_t current, int32_t total) {
+  LV_ASSERT_NULL(anchor);
+  if (!parent || total <= 0)
+    return NULL;
+
+  lv_obj_t *bar = lv_bar_create(parent);
+  int32_t thickness = theme_min_dim() / 150 + 1;
+  lv_obj_set_size(bar, LV_PCT(40), thickness);
+  lv_bar_set_range(bar, 0, total);
+  lv_bar_set_value(bar, current, LV_ANIM_OFF);
+  lv_obj_set_style_bg_color(bar, disabled_color(), LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(bar, accent_color(), LV_PART_INDICATOR);
+  lv_obj_set_style_radius(bar, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+  lv_obj_set_style_radius(bar, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
+  lv_obj_clear_flag(bar, LV_OBJ_FLAG_CLICKABLE);
+
+  lv_obj_align_to(bar, anchor, LV_ALIGN_OUT_BOTTOM_MID, 0,
+                  theme_small_padding());
+  return bar;
+}
+
 void theme_apply_transparent_container(lv_obj_t *obj) {
   if (obj)
     lv_obj_add_style(obj, &styles.transparent_container, 0);

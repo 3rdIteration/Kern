@@ -26,6 +26,11 @@ lv_obj_t *theme_create_button(lv_obj_t *parent, const char *text,
 lv_obj_t *theme_create_label(lv_obj_t *parent, const char *text,
                              bool is_secondary);
 lv_obj_t *theme_create_page_title(lv_obj_t *parent, const char *text);
+// Slim step indicator for multi-screen flows (e.g. PIN setup). Aligns
+// directly below `anchor` (typically the page title). `anchor` must be
+// non-NULL (asserted); returns NULL if `parent` is NULL or `total` <= 0.
+lv_obj_t *theme_create_progress_bar(lv_obj_t *parent, lv_obj_t *anchor,
+                                    int32_t current, int32_t total);
 void theme_apply_transparent_container(lv_obj_t *obj);
 lv_obj_t *theme_create_scroll_column(lv_obj_t *parent, int32_t pad,
                                      int32_t gap);
