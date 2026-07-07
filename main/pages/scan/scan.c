@@ -395,6 +395,15 @@ static address_network_t detect_address_network(const char *data) {
   return result;
 }
 
+static lv_obj_t *progress_dialog = NULL;
+
+static void dismiss_progress(void) {
+  if (progress_dialog) {
+    lv_obj_del(progress_dialog);
+    progress_dialog = NULL;
+  }
+}
+
 // Classify an already-assembled blob and route it to the matching review
 // screen. Shared by the QR scanner and the SD-card loader, so it must not touch
 // any qr_scanner_page_* state — the caller tears the scanner down first. Takes
@@ -504,15 +513,9 @@ static void finish_dispatch(char *qr_content, size_t qr_content_len,
 
 // --- Main scanner callback with two-layer detection ---
 
-static void return_from_qr_scanner_cb(void) {
-  if (!qr_scanner_has_completed_result()) {
-    qr_scanner_page_hide();
-    qr_scanner_page_destroy();
-    if (return_callback)
-      return_callback();
-    return;
-  }
-
+// Camera teardown plus payload parsing — for large PSBTs this can take over a
+// second, so it runs behind the progress dialog from a one-shot timer.
+static void process_scan_result(void) {
   int detected_format = qr_scanner_get_format();
 
   char *qr_content = NULL;
@@ -595,6 +598,29 @@ static void return_from_qr_scanner_cb(void) {
   qr_scanner_page_destroy();
 
   finish_dispatch(qr_content, qr_content_len, parse_success, detected_format);
+}
+
+static void deferred_scan_process_cb(lv_timer_t *timer) {
+  (void)timer;
+  process_scan_result();
+  dismiss_progress();
+}
+
+static void return_from_qr_scanner_cb(void) {
+  if (!qr_scanner_has_completed_result()) {
+    qr_scanner_page_hide();
+    qr_scanner_page_destroy();
+    if (return_callback)
+      return_callback();
+    return;
+  }
+
+  // Parsing large PSBTs can take over a second — show a progress dialog and
+  // defer the work to a one-shot timer so LVGL gets to render it first.
+  progress_dialog =
+      dialog_show_progress("Scan", "Processing...", DIALOG_STYLE_OVERLAY);
+  lv_timer_t *t = lv_timer_create(deferred_scan_process_cb, 50, NULL);
+  lv_timer_set_repeat_count(t, 1);
 }
 
 // Resets the signed-PSBT export context. A scanned PSBT has no source folder
@@ -1463,15 +1489,6 @@ static bool create_psbt_info_display(void) {
   create_sign_action_row(psbt_info_container, sign_button_cb);
 
   return true;
-}
-
-static lv_obj_t *progress_dialog = NULL;
-
-static void dismiss_progress(void) {
-  if (progress_dialog) {
-    lv_obj_del(progress_dialog);
-    progress_dialog = NULL;
-  }
 }
 
 static void destroy_export_menu(void) {
