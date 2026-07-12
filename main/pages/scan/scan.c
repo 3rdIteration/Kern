@@ -79,6 +79,7 @@ typedef struct {
    * that aren't OWNED_SAFE — UNSAFE / EXPECTED_OWNED inputs surface the
    * raw path in their own warning sections. */
   char policy[64];
+  char path[80]; /* populated for OWNED_UNSAFE / EXPECTED_OWNED */
 } classified_input_t;
 
 static const char *ss_script_label(ss_script_type_t script) {
@@ -1033,6 +1034,13 @@ static bool create_psbt_info_display(void) {
                           : primary_color();
     format_input_policy(&own, classified_inputs[i].policy,
                         sizeof(classified_inputs[i].policy));
+    classified_inputs[i].path[0] = '\0';
+    if (own.ownership == PSBT_OWNERSHIP_OWNED_UNSAFE ||
+        own.ownership == PSBT_OWNERSHIP_EXPECTED_OWNED) {
+      psbt_format_keypath(own.raw_keypath, own.raw_keypath_len,
+                          classified_inputs[i].path,
+                          sizeof(classified_inputs[i].path));
+    }
 
     /* External inputs need their address rendered in the warning section.
      * Skip address decoding for owned inputs — they're not displayed. */
@@ -1252,6 +1260,80 @@ static bool create_psbt_info_display(void) {
     lv_obj_set_style_max_width(src, LV_PCT(100), 0);
   }
   (void)total_input_value; /* now distributed across per-policy rows */
+
+  /* Count non-standard owned inputs up-front so we can collapse to a
+   * totals row when the list would scroll-fatigue the review screen. */
+#define NONSTANDARD_INPUT_INLINE_THRESHOLD 4
+  size_t unsafe_input_count = 0;
+  uint64_t total_unsafe_input = 0;
+  for (size_t i = 0; i < num_inputs; i++) {
+    if (classified_inputs[i].ownership == PSBT_OWNERSHIP_OWNED_UNSAFE) {
+      unsafe_input_count++;
+      total_unsafe_input += classified_inputs[i].value;
+    }
+  }
+
+  if (unsafe_input_count > NONSTANDARD_INPUT_INLINE_THRESHOLD) {
+    char title_text[64];
+    snprintf(title_text, sizeof(title_text),
+             "Owned inputs, non-standard path (%zu): ", unsafe_input_count);
+    lv_obj_t *title =
+        theme_create_label(psbt_info_container, title_text, false);
+    theme_apply_label(title, true);
+    lv_obj_set_style_text_color(title, accent_color(), 0);
+    lv_obj_set_style_margin_top(title, 15, 0);
+    lv_obj_set_width(title, LV_PCT(100));
+
+    lv_obj_t *row = create_btc_value_row(
+        psbt_info_container, "Total: ", total_unsafe_input, primary_color());
+    lv_obj_set_width(row, LV_PCT(100));
+    lv_obj_set_style_pad_left(row, 20, 0);
+  } else if (unsafe_input_count > 0) {
+    lv_obj_t *title = theme_create_label(
+        psbt_info_container, "Owned inputs (non-standard path): ", false);
+    theme_apply_label(title, true);
+    lv_obj_set_style_text_color(title, accent_color(), 0);
+    lv_obj_set_style_margin_top(title, 15, 0);
+    lv_obj_set_width(title, LV_PCT(100));
+
+    for (size_t i = 0; i < num_inputs; i++) {
+      if (classified_inputs[i].ownership != PSBT_OWNERSHIP_OWNED_UNSAFE)
+        continue;
+      char text[128];
+      snprintf(text, sizeof(text),
+               "Input %zu (%s): ", classified_inputs[i].index,
+               classified_inputs[i].path[0] ? classified_inputs[i].path : "?");
+      lv_obj_t *row =
+          create_btc_value_row(psbt_info_container, text,
+                               classified_inputs[i].value, primary_color());
+      lv_obj_set_width(row, LV_PCT(100));
+      lv_obj_set_style_pad_left(row, 20, 0);
+    }
+  }
+
+  bool has_expected_inputs = false;
+  for (size_t i = 0; i < num_inputs; i++) {
+    if (classified_inputs[i].ownership != PSBT_OWNERSHIP_EXPECTED_OWNED)
+      continue;
+    if (!has_expected_inputs) {
+      lv_obj_t *title =
+          theme_create_label(psbt_info_container,
+                             "Expected ownership inputs (UNVERIFIED): ", false);
+      theme_apply_label(title, true);
+      lv_obj_set_style_text_color(title, error_color(), 0);
+      lv_obj_set_style_margin_top(title, 15, 0);
+      lv_obj_set_width(title, LV_PCT(100));
+      has_expected_inputs = true;
+    }
+
+    char text[128];
+    snprintf(text, sizeof(text), "Input %zu (%s): ", classified_inputs[i].index,
+             classified_inputs[i].path[0] ? classified_inputs[i].path : "?");
+    lv_obj_t *row = create_btc_value_row(
+        psbt_info_container, text, classified_inputs[i].value, primary_color());
+    lv_obj_set_width(row, LV_PCT(100));
+    lv_obj_set_style_pad_left(row, 20, 0);
+  }
 
   /* External inputs warning section. The Partial-signing gate has already
    * passed (otherwise we wouldn't reach the review screen with externals
