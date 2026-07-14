@@ -61,9 +61,13 @@ sim-build board="wave_4b": (_check_board board)
         -DSIM_LCD_V_RES=$(just _sim_v_res {{board}}) \
         && cmake --build build -- -j$(nproc)
 
-# Run the desktop simulator
+# Run the desktop simulator with webcam
 # SDL env vars: software renderer for compatibility with ssh -X
-sim board="wave_4b": (sim-build board)
+sim board="wave_4b": (sim-build-webcam board)
+    SDL_VIDEODRIVER=x11 SDL_RENDER_DRIVER=software ./simulator/build/kern_simulator --webcam
+
+# Run the desktop simulator without camera
+sim-no-cam board="wave_4b": (sim-build board)
     SDL_VIDEODRIVER=x11 SDL_RENDER_DRIVER=software ./simulator/build/kern_simulator
 
 # Clean simulator build artifacts
@@ -85,10 +89,6 @@ sim-build-webcam board="wave_4b": (_check_board board)
         -DSIM_LCD_H_RES=$(just _sim_h_res {{board}}) \
         -DSIM_LCD_V_RES=$(just _sim_v_res {{board}}) \
         && cmake --build build -- -j$(nproc)
-
-# Run simulator with webcam (builds with V4L2 support)
-sim-webcam board="wave_4b": (sim-build-webcam board)
-    SDL_VIDEODRIVER=x11 SDL_RENDER_DRIVER=software ./simulator/build/kern_simulator --webcam
 
 # update subrepo dependencies
 dep:
